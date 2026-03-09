@@ -1790,7 +1790,7 @@ body.tl-pdf-fullscreen #viewer .page {
     position: relative !important;
 }
 
-body.tl-pdf-fullscreen #viewer .page canvas {
+body.tl-pdf-fullscreen #viewer .page canvas.tl-pdf-canvas {
     position: relative !important;
 }
 
