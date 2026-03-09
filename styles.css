@@ -1791,7 +1791,6 @@ body.tl-pdf-fullscreen #viewer .page canvas {
     display: inline-block !important;
     margin-left: 10px !important;
     vertical-align: middle !important;
-    margin-top: 0.35em;
 }
 
 /* Modal widoczny w fullscreen */
@@ -2494,4 +2493,13 @@ body:not(.tl-pdf-fullscreen) #viewer {
     display: inline-flex !important;
     visibility: visible !important;
     opacity: 1 !important;
+}
+
+
+/* TL: fullscreen button in express toolbar - flex centering */
+.tl-express-toolbar #tl-fullscreen-btn {
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    margin-top: 0 !important;
 }
