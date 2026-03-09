@@ -1,0 +1,15 @@
+---
+description: Źródło zasad pracy wyłącznie dla projektu PDF Annotator (nie stosować w innych workspace'ach)
+globs: "**/*"
+alwaysApply: true
+---
+
+# Zasady pracy – jeden punkt odniesienia
+
+Przy pracy w tym projekcie (PDF Annotator, Moodle) stosuj wyłącznie:
+
+**[PDF_ANNOTATOR_ZASADY_PRACY.md](PDF_ANNOTATOR_ZASADY_PRACY.md)**
+
+Zawiera: zakres stosowania (tylko ten projekt), edycja przez skrypt, backup, testy SANITY/SYNTAX/REGRES/SMOKE, które pliki analizować, minimalizacja tokenów, styl komunikacji, zabronione praktyki.
+
+Nie duplikuj tych zasad ani nie odwołuj się do zastąpionych dokumentów (Zasady pracy…, SUPERPROMPT) w celu oszczędzania tokenów.

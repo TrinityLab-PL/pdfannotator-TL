@@ -1,0 +1,116 @@
+---
+description: Obowiązkowy workflow przy pozytywnych zmianach kodu PDF Annotator (Moodle)
+globs: mod/pdfannotator/**/*
+alwaysApply: true
+---
+
+# Workflow zmian kodu – OBOWIĄZKOWY
+
+## Zabezpieczenie: edycja tylko przez skrypt
+
+**Jeden prompt = jeden bash.** W jednej odpowiedzi na prompt użytkownika dozwolone jest **tylko jedno** wywołanie `edit-with-maintenance.sh`. Wszystkie zmiany kodu muszą być w jednym `--cmd` (np. `cmd1 && cmd2 && cmd3` lub jeden skrypt). **NIGDY** nie uruchamiać skryptu drugi raz w tym samym przejściu. Po wykonaniu bashu można podać użytkownikowi kroki smoke testów (instrukcje ręczne).
+
+Plik `mod/pdfannotator/shared/index.js` (oraz ewentualnie inne objęte skryptem) jest **chroniony**: jedyna dozwolona edycja to uruchomienie skryptu **edit-with-maintenance.sh**, który zawsze wykonuje: maintenance on → odblokowanie pliku → zmiana → purge → maintenance off → ponowne zablokowanie.
+
+- **NIGDY** nie używaj StrReplace, Write ani EditNotebook do plików w `mod/pdfannotator/`. Użycie ich do edycji chronionego pliku jest **zabronione**; jeśli plik jest ustawiony na tylko do odczytu (444), zapis i tak się nie powiedzie.
+- **ZAWSZE** wykonuj zmiany **wyłącznie** przez skrypt:
+  - **Restore z backupu:**  
+    `cd /var/www/html/moodle && ./mod/pdfannotator/edit-with-maintenance.sh --restore`
+  - **Dowolna edycja (sed / wiele poleceń):**  
+    `cd /var/www/html/moodle && ./mod/pdfannotator/edit-with-maintenance.sh --cmd 'sed -i "s/stary_tekst/nowy_tekst/" mod/pdfannotator/shared/index.js'`  
+    lub złożone: `--cmd 'python3 << EOF\n...\nEOF'`
+- Skrypt znajduje się w: `mod/pdfannotator/edit-with-maintenance.sh` (uruchamiany z katalogu głównego Moodle).
+
+## Bezpieczeństwo trybu konserwacji (MUST)
+
+- Skrypt może **zostawić Moodle w maintenance**, gdy `--cmd` zwróci exit != 0. **ZAKAZ** kończenia promptu z serwerem w maintenance.
+- Każdy bash z `edit-with-maintenance.sh --cmd` musi na końcu **wymusić wyjście z maintenance** w tym samym wywołaniu:
+  `cd /var/www/html/moodle && ./mod/pdfannotator/edit-with-maintenance.sh --cmd '...' || true; php admin/cli/maintenance.php --disable`
+- W odpowiedzi zawsze raportować: wynik skryptu (exit 0 / błąd) oraz że wykonano `php admin/cli/maintenance.php --disable`. Nie kończyć promptu bez pewności, że maintenance jest wyłączony.
+
+## Włączenie blokady zapisu (opcjonalnie, po Twojej stronie)
+
+Aby **fizycznie** uniemożliwić zapis bez trybu konserwacji (np. żeby StrReplace zwracał "Permission denied"), uruchom **raz** z uprawnieniami do zmiany uprawnień pliku:
+
+```bash
+cd /var/www/html/moodle && sudo ./mod/pdfannotator/edit-with-maintenance.sh --lock
+```
+
+Po tym plik ma 444 i żadna edycja bez skryptu się nie uda. Odblokowanie (np. do ręcznej edycji):  
+`sudo ./mod/pdfannotator/edit-with-maintenance.sh --unlock`
+
+## Przed każdą zmianą kodu
+
+Zawsze przed wprowadzeniem zmiany: **sanity-check**, **syntax**, **regres**, **smoke**. Dopiero potem zmiana przez skrypt (--restore lub --cmd).
+
+## Obowiązkowe testy (twarde kroki + kryteria zaliczenia)
+
+Każdą zmianę poprzedzaj i kończ tym samym zestawem testów. W odpowiedzi zawsze raportuj wynik w formacie: `SANITY: OK/FAIL`, `SYNTAX: OK/FAIL`, `REGRES: OK/FAIL`, `SMOKE: OK/FAIL`.
+
+### 1) SANITY-CHECK (CLI, przed zmianą)
+
+Uruchom:
+
+```bash
+cd /var/www/html/moodle && \
+  test -f mod/pdfannotator/shared/index.js && \
+  test -f mod/pdfannotator/edit-with-maintenance.sh && \
+  test -f /root/trinity_lab_backup/v100_full_snapshot_pdfannotator_20260309_071509/mod/shared/index.js
+```
+
+Kryterium zaliczenia: kod wyjścia `0`.
+
+### 2) SYNTAX (CLI, przed i po zmianie)
+
+Uruchom:
+
+```bash
+cd /var/www/html/moodle && php -l mod/pdfannotator/view.php && php -l mod/pdfannotator/lib.php
+```
+
+Dla JS:
+- jeśli `node` jest dostępny:
+  ```bash
+  node --check /var/www/html/moodle/mod/pdfannotator/shared/index.js
+  ```
+- jeśli `node` nie jest dostępny: oznacz jako `SYNTAX: SKIPPED (node unavailable)` i przejdź dalej.
+
+Kryterium zaliczenia: brak błędów parsera.
+
+### 3) REGRES (UI, manualnie)
+
+Wykonaj test manualny dla `point`, `area`, `textbox`, `text`:
+- zoom: `100%`, `133%`, `150%`, `200%`
+- tryb: normalny i fullscreen
+- akcja: utwórz adnotację, przeciągnij, zapisz, odśwież stronę, sprawdź pozycję
+
+Kryterium zaliczenia:
+- brak skoku po zapisie,
+- pozycja po odświeżeniu zgodna z pozycją po drag,
+- brak regresji dla `area/textbox/text`.
+
+### 4) SMOKE (minimum end-to-end)
+
+Wykonaj:
+- otwarcie dokumentu PDF,
+- dodanie nowej pinezki (`point`),
+- przeciągnięcie i zapis,
+- usunięcie adnotacji.
+
+Kryterium zaliczenia: brak błędów UI blokujących flow.
+
+### 5) Bramka wykonania zmian
+
+Jeśli którykolwiek test ma `FAIL`, **NIE WOLNO** modyfikować kodu. Najpierw napraw przyczynę testu.
+Jeśli testy są `OK` (lub `SYNTAX: SKIPPED` wyłącznie z powodu braku `node`), dopiero wtedy wolno uruchomić `edit-with-maintenance.sh --cmd ...`.
+
+## Zabronione
+
+- **Zostawienie Moodle w trybie konserwacji** po zakończeniu promptu. Po każdym wywołaniu skryptu w tym samym bashu musi być `php admin/cli/maintenance.php --disable`.
+- Wielokrotne wywołania `edit-with-maintenance.sh` w ramach jednej odpowiedzi na jeden prompt (wielokrotne włączanie trybu konserwacji).
+
+- Używać StrReplace, Write, EditNotebook do zmiany plików w `mod/pdfannotator/`.
+- Włączać konserwację w jednej komendzie, a zmiany robić w innej (zmiana wyłącznie wewnątrz skryptu).
+- Dzielić rollback na dwa kroki – tylko `./mod/pdfannotator/edit-with-maintenance.sh --restore` w jednym wywołaniu.
+
+Kod ma się zmieniać **wyłącznie** przez `edit-with-maintenance.sh` (--cmd lub --restore).

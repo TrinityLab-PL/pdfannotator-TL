@@ -1,0 +1,27 @@
+# Ograniczenie indeksowania – tylko to, co zbędne przy typowej analizie (Zasady p.6)
+# Nie ignorowane: shared/index.js, view.php, lib.php, styles.css, fullscreen_enhanced.js,
+#                 classes/, templates/, model/, PDF_ANNOTATOR_ZASADY_PRACY.md, PROBLEMY_I_SUGESTIE.md
+
+lang/
+pix/
+backup/
+amd/
+db/
+tests/
+
+shared/pdf.js
+shared/pdf.worker.js
+shared/textclipper.js
+shared/locallib.js
+shared/statistic.js
+shared/overview.js
+
+.vscode/
+*.sh
+*.code-workspace
+
+CHANGELOG.md
+README.md
+SUPERPROMPT - MOODLE PDF ANNOTATION 10-02.md
+pierwsze_kroki_PDF.md
+Zasady pracy nad PDF Annotation.md
