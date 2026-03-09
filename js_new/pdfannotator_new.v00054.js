@@ -1708,6 +1708,7 @@
         var saveBtn = document.createElement('button');
         saveBtn.type = 'button';
         saveBtn.className = 'tl-save-textbox';
+        saveBtn.style.cursor = 'pointer';
         saveBtn.setAttribute('aria-label', 'Save');
         saveBtn.innerHTML = '<i class="fa fa-check" aria-hidden="true"></i>';
         saveBtn.addEventListener('click', function (e) { e.preventDefault(); e.stopPropagation(); commit(); });
@@ -1733,12 +1734,14 @@
         editor.select();
 
         var committed = false;
-        function commit() {
+        function commit(fromBlur) {
             if (committed) {
                 return;
             }
             committed = true;
-            state.ignoreNextTextboxClick = true;
+            if (fromBlur) {
+                state.ignoreNextTextboxClick = true;
+            }
             if (saveBtn && saveBtn.parentNode) {
                 saveBtn.parentNode.removeChild(saveBtn);
             }
@@ -1756,7 +1759,7 @@
             persistAnnotation(annotationData);
             editor.remove();
         }
-        editor.addEventListener('blur', commit);
+        editor.addEventListener('blur', function () { commit(true); });
         editor.addEventListener('keydown', function (event) {
             if (event.key === 'Escape') {
                 committed = true;
@@ -1846,6 +1849,7 @@
         var saveBtn = document.createElement('button');
         saveBtn.type = 'button';
         saveBtn.className = 'tl-save-textbox';
+        saveBtn.style.cursor = 'pointer';
         saveBtn.setAttribute('aria-label', 'Save');
         saveBtn.innerHTML = '<i class="fa fa-check" aria-hidden="true"></i>';
         saveBtn.addEventListener('click', function (e) { e.preventDefault(); e.stopPropagation(); commit(); });
@@ -1885,12 +1889,14 @@
             setTool('cursor');
         }
 
-        function commit() {
+        function commit(fromBlur) {
             if (committed) {
                 return;
             }
             committed = true;
-            state.ignoreNextTextboxClick = true;
+            if (fromBlur) {
+                state.ignoreNextTextboxClick = true;
+            }
 
             var content = String(editor.value || '').trim();
             if (!content) {
@@ -1958,7 +1964,7 @@
             });
         }
 
-        editor.addEventListener('blur', commit);
+        editor.addEventListener('blur', function () { commit(true); });
         editor.addEventListener('keydown', function (event) {
             if (event.key === 'Escape') {
                 committed = true;

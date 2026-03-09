@@ -1958,6 +1958,15 @@ body.tl-pdf-fullscreen #viewer .tl-konva-host {
     z-index: 1000000000 !important;
 }
 
+body.tl-pdf-fullscreen .tl-delete-annotation {
+    z-index: 1000000001 !important;
+}
+
+body.tl-pdf-fullscreen #viewer .tl-save-textbox,
+body.tl-pdf-fullscreen .path-mod-pdfannotator .tl-save-textbox {
+    z-index: 1000000001 !important;
+    cursor: pointer !important;
+}
 
 #toolbarContent [data-tooltype].tl-tool-active {
     outline: 2px solid #0f766e;
@@ -1992,7 +2001,7 @@ body.tl-pdf-fullscreen #viewer .tl-konva-host {
     height: 26px;
     border-radius: 50%;
     border: 0;
-    background: #059669;
+    background: #6eae19;
     color: #fff;
     font-weight: 700;
     cursor: pointer;
