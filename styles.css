@@ -1954,6 +1954,11 @@ body.tl-pdf-fullscreen svg.annotationLayer {
     z-index: 4;
 }
 
+body.tl-pdf-fullscreen #viewer .tl-konva-host {
+    z-index: 1000000000 !important;
+}
+
+
 #toolbarContent [data-tooltype].tl-tool-active {
     outline: 2px solid #0f766e;
     outline-offset: 1px;
@@ -2313,6 +2318,7 @@ body.tl-pdf-fullscreen svg.annotationLayer {
     -webkit-font-smoothing: subpixel-antialiased;
     -moz-osx-font-smoothing: auto;
     text-rendering: geometricPrecision;
+    transform: translateZ(0);
 }
 
 .tl-inline-text-editor:focus,
@@ -2323,6 +2329,19 @@ body.tl-pdf-fullscreen svg.annotationLayer {
     outline-offset: 0 !important;
     border-color: rgba(148, 163, 184, 0.5) !important;
     box-shadow: 0 1px 6px rgba(15, 23, 42, 0.1) !important;
+}
+
+/* Tekst textboxa w DOM – ostry render (nie canvas) */
+.tl-textbox-label {
+    position: absolute;
+    z-index: 25;
+    pointer-events: none;
+    margin: 0;
+    padding: 0;
+    -webkit-font-smoothing: subpixel-antialiased;
+    -moz-osx-font-smoothing: auto;
+    text-rendering: geometricPrecision;
+    transform: translateZ(0);
 }
 
 .tl-inline-text-editor::selection {
