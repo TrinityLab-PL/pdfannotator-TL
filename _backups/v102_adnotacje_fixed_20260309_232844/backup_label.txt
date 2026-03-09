@@ -1,0 +1,5 @@
+v102_adnotacje_fixed_20260309_232844
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+$plugin->version   = 2025090300;
+$plugin->release  = 'PDF Annotator v1.5 release 9';
