@@ -1,0 +1,201 @@
+--- a/mod/pdfannotator/js_new/pdfannotator_new.v00054.js
++++ b/mod/pdfannotator/js_new/pdfannotator_new.v00054.js
+@@ -178,6 +178,11 @@
+         document.querySelectorAll('#tl-express-toolbar [data-proxy-tool]').forEach(function (button) {
+             var activeTool = button.getAttribute('data-proxy-tool') === state.activeTool;
+             button.classList.toggle('active-tool', activeTool);
+         });
++        var viewer = viewerEl();
++        if (viewer) {
++            viewer.classList.toggle('tl-tool-textbox', state.activeTool === 'textbox');
++        }
+         if (state.activeTool !== 'cursor') {
+             clearSelection();
+         }
+@@ -840,8 +845,14 @@
+                 return;
+             }
+ 
++            if (tool === 'textbox') {
++                draftStart = pointer;
++                return;
++            }
++
+             draftStart = pointer;
+ 
+             if (tool === 'drawing') {
+@@ -888,6 +899,7 @@
+ 
+         stage.on('mouseup touchend', function () {
+             var tool = state.activeTool;
++            var pointer = stage.getPointerPosition();
+             if (drawing) {
+                 var linePoints = drawing.points();
+                 drawing.destroy();
+@@ -908,6 +920,12 @@
+                 return;
+             }
+ 
++            if (tool === 'textbox' && pointer && !draftRect) {
++                showNewTextboxEditor(pageNumber, pointer.x, pointer.y);
++                return;
++            }
++
+             if (draftRect && draftStart) {
+                 var finalRect = {
+                     x: draftRect.x(),
+@@ -1635,5 +1635,122 @@
+         });
+     }
+ 
++    function showNewTextboxEditor(pageNumber, pointerX, pointerY) {
++        var viewer = viewerEl();
++        if (!viewer) {
++            return;
++        }
++        var pageElement = viewer.querySelector('.page[data-page-number="' + pageNumber + '"]');
++        if (!pageElement) {
++            return;
++        }
++
++        var editor = document.createElement('textarea');
++        editor.className = 'tl-inline-text-editor';
++        editor.value = '';
++
++        var editorFontSize = Math.max(10, Number(state.textSize || 14));
++        var editorFontFamily = state.textFont || 'Open Sans';
++
++        editor.style.left = pointerX + 'px';
++        editor.style.top = pointerY + 'px';
++        editor.style.width = '140px';
++        editor.style.height = '44px';
++        editor.style.fontSize = editorFontSize + 'px';
++        editor.style.fontFamily = editorFontFamily + ', sans-serif';
++        editor.style.color = state.textColor || '#111827';
++
++        pageElement.appendChild(editor);
++
++        editor.addEventListener('mousedown', function (event) { event.stopPropagation(); });
++        editor.addEventListener('click', function (event) { event.stopPropagation(); });
++        editor.addEventListener('dblclick', function (event) { event.stopPropagation(); });
++
++        editor.focus();
++        editor.select();
++
++        var committed = false;
++
++        function cleanup() {
++            try {
++                editor.remove();
++            } catch (e) {}
++            setTool('cursor');
++        }
++
++        function commit() {
++            if (committed) {
++                return;
++            }
++            committed = true;
++
++            var content = String(editor.value || '').trim();
++            if (!content) {
++                cleanup();
++                return;
++            }
++
++            var pageState = getPageState(pageNumber);
++            if (!pageState) {
++                cleanup();
++                return;
++            }
++
++            var centerX = (pointerX || 0) / state.scale;
++            var centerY = (pointerY || 0) / state.scale;
++
++            var annotation = {
++                type: 'textbox',
++                x: centerX - 20,
++                y: centerY - 15,
++                width: 40,
++                height: 30,
++                size: editorFontSize,
++                font: editorFontFamily,
++                color: state.textColor || '#111827',
++                content: content
++            };
++
++            fitTextboxAroundContent(annotation);
++
++            ajax('create', {
++                page_Number: String(pageNumber),
++                annotation: JSON.stringify(annotation)
++            }).then(function (created) {
++                if (!created || !created.uuid) {
++                    return;
++                }
++                var createdGroup = drawAnnotation(pageNumber, created);
++                var pageState = getPageState(pageNumber);
++                if (pageState) {
++                    pageState.annotationLayer.draw();
++                }
++                if (createdGroup) {
++                    selectAnnotation(pageNumber, createdGroup);
++                }
++                ensureCommentPanelVisible();
++                loadCommentsForAnnotation(created.uuid, created.type);
++            }).catch(function (error) {
++                console.error('Create annotation failed', error);
++            }).finally(function () {
++                cleanup();
++            });
++        }
++
++        editor.addEventListener('blur', commit);
++        editor.addEventListener('keydown', function (event) {
++            if (event.key === 'Escape') {
++                committed = true;
++                cleanup();
++                return;
++            }
++            if (event.key === 'Enter' && (event.ctrlKey || event.metaKey)) {
++                event.preventDefault();
++                commit();
++            }
++        });
++    }
++
+     function drawAnnotation(pageNumber, annotation) {
+         
+                 var pageState = getPageState(pageNumber);
+@@ -1685,3 +1685,3 @@
+                 cornerRadius: 7,
+-                fill: 'rgba(235, 242, 252, 0.92)'
++                fill: 'rgba(235, 242, 252, 0.55)'
+             }));
+             var textFontSize = Math.max(10, Math.round((annotation.size || state.textSize || 14) * scale));
+             group.add(new Konva.Text({
+--- a/mod/pdfannotator/styles.css
++++ b/mod/pdfannotator/styles.css
+@@ -982,6 +982,13 @@
+ .path-mod-pdfannotator .cursor-edit * {
+     cursor: pointer !important;
+ }
++
++/* Kursor I-beam dla narzędzia Textbox */
++.path-mod-pdfannotator #viewer.tl-tool-textbox,
++.path-mod-pdfannotator #viewer.tl-tool-textbox .tl-konva-host,
++.path-mod-pdfannotator #viewer.tl-tool-textbox .tl-pdf-canvas {
++    cursor: text;
++}
+ 
+ /******************************************** START: mainly for overview page *******************************************/
+ 
+@@ -2294,7 +2301,7 @@
+     border-radius: 7px;
+     padding: 10px 12px;
+     resize: both;
+-    background: rgba(240, 246, 253, 0.97);
++    background: rgba(240, 246, 253, 0.65);
+     color: #111827;
+     font-size: 14px;
+ }

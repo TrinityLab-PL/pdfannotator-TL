@@ -92,13 +92,22 @@ Kryterium zaliczenia:
 
 ### 4) SMOKE (minimum end-to-end)
 
-Wykonaj:
-- otwarcie dokumentu PDF,
-- dodanie nowej pinezki (`point`),
-- przeciągnięcie i zapis,
-- usunięcie adnotacji.
+**Po każdej zmianie kodu ZAWSZE podaj użytkownikowi poniższe kroki SMOKE** (zgodnie z [PDF_ANNOTATOR_ZASADY_PRACY.md](PDF_ANNOTATOR_ZASADY_PRACY.md), sekcja 5). Nie pomijaj tego — użytkownik ma otrzymać gotową listę do ręcznego wykonania.
 
-Kryterium zaliczenia: brak błędów UI blokujących flow.
+**Kroki SMOKE (instrukcje dla użytkownika):**
+1. Otwórz dokument PDF w PDF Annotatorze.
+2. Ewentualnie: wyczyść cache przeglądarki i zrób twarde odświeżenie (Ctrl+Shift+R / Cmd+Shift+R), potem zwykłe F5.
+3. Dodaj nową pinezkę (point), przeciągnij, zapisz.
+4. Usuń adnotację.
+5. Kryterium zaliczenia: brak błędów UI blokujących flow.
+
+**Kroki SMOKE – fullscreen (ikona)** — podawać gdy zmiana dotyczy fullscreen lub `fullscreen_enhanced.js`:
+1. Otwórz dokument PDF w PDF Annotatorze.
+2. Sprawdź przycisk fullscreen: ikona jest większa (ok. 22px), czytelna; tooltip „Full screen (ESC to exit)”.
+3. Kliknij przycisk fullscreen → wejście w pełny ekran; ikona zmienia się na „compress”, tooltip „Exit full screen (ESC)”.
+4. Wyjdź z fullscreen: kliknij przycisk ponownie lub naciśnij ESC → ikona wraca do „expand”, tooltip do „Full screen (ESC to exit)”.
+5. Opcjonalnie (Chrome, Chromium, Safari, Firefox): wejście w fullscreen klawiszem F11 → ikona/tooltip w stanie „compress”; wyjście F11/ESC → ikona/tooltip w stanie „expand”.
+6. Kryterium zaliczenia: ikona zawsze odzwierciedla stan fullscreen, brak błędów w konsoli.
 
 ### 5) Bramka wykonania zmian
 

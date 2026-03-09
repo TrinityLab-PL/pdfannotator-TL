@@ -87,7 +87,7 @@ $PAGE->set_heading($course->fullname);
 
 // Trinity Lab: Load enhanced fullscreen module
 // Hotfix: disable missing AMD module that can break page bootstrap.
-$PAGE->requires->js('/mod/pdfannotator/fullscreen_enhanced.js', false);
+$PAGE->requires->js('/mod/pdfannotator/fullscreen_enhanced.js?ver=00055', false);
 $PAGE->requires->css('/mod/pdfannotator/lib/shoelace/dist/themes/light.css');
 
 // Display course name, navigation bar at the very top and "Dashboard->...->..." bar.
