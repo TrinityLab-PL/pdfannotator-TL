@@ -179,6 +179,10 @@
             var activeTool = button.getAttribute('data-proxy-tool') === state.activeTool;
             button.classList.toggle('active-tool', activeTool);
         });
+        var viewer = viewerEl();
+        if (viewer) {
+            viewer.classList.toggle('tl-tool-textbox', state.activeTool === 'textbox');
+        }
         if (state.activeTool !== 'cursor') {
             clearSelection();
         }
@@ -760,7 +764,8 @@
         var stage = new Konva.Stage({
             container: hostElement,
             width: viewport.width,
-            height: viewport.height
+            height: viewport.height,
+            pixelRatio: window.devicePixelRatio || 1
         });
 
         var annotationLayer = new Konva.Layer();
@@ -841,6 +846,11 @@
                 return;
             }
 
+            if (tool === 'textbox') {
+                draftStart = pointer;
+                return;
+            }
+
             draftStart = pointer;
 
             if (tool === 'drawing') {
@@ -890,6 +900,7 @@
 
         stage.on('mouseup touchend', function () {
             var tool = state.activeTool;
+            var pointer = stage.getPointerPosition();
             if (drawing) {
                 var linePoints = drawing.points();
                 drawing.destroy();
@@ -907,6 +918,11 @@
                     });
                 }
                 setTool('cursor');
+                return;
+            }
+
+            if (tool === 'textbox' && pointer && !draftRect) {
+                showNewTextboxEditor(pageNumber, pointer.x, pointer.y);
                 return;
             }
 
@@ -1637,6 +1653,178 @@
         });
     }
 
+    function showNewTextboxEditor(pageNumber, pointerX, pointerY) {
+        var viewer = viewerEl();
+        if (!viewer) {
+            return;
+        }
+        var pageElement = viewer.querySelector('.page[data-page-number="' + pageNumber + '"]');
+        if (!pageElement) {
+            return;
+        }
+
+        var editor = document.createElement('textarea');
+        editor.className = 'tl-inline-text-editor';
+        editor.value = '';
+
+        var editorFontSize = Math.max(10, Number(state.textSize || 14));
+        var editorFontFamily = state.textFont || 'Open Sans';
+        var displayFontSize = Math.max(10, Math.round(editorFontSize * (state.scale || 1)));
+
+        var paddingTop = 10;
+        var paddingLeft = 12;
+        var caretOffset = displayFontSize * 0.72;
+        editor.style.left = (pointerX - paddingLeft) + 'px';
+        editor.style.top = (pointerY - paddingTop - caretOffset) + 'px';
+        editor.style.minWidth = '60px';
+        editor.style.minHeight = '36px';
+        editor.style.width = '60px';
+        editor.style.height = '36px';
+        editor.style.fontSize = displayFontSize + 'px';
+        editor.style.fontFamily = editorFontFamily + ', sans-serif';
+        editor.style.color = state.textColor || '#111827';
+        editor.style.lineHeight = '1.2';
+        editor.style.border = '1px solid rgba(148, 163, 184, 0.4)';
+        editor.style.outline = 'none';
+        editor.style.boxShadow = '0 1px 4px rgba(15, 23, 42, 0.08)';
+        editor.style.webkitFontSmoothing = 'subpixel-antialiased';
+        editor.style.textRendering = 'geometricPrecision';
+
+        editor.addEventListener('focus', function () {
+            editor.style.border = '1px solid rgba(148, 163, 184, 0.4)';
+            editor.style.outline = 'none';
+            editor.style.boxShadow = '0 1px 4px rgba(15, 23, 42, 0.08)';
+        });
+
+        pageElement.appendChild(editor);
+
+        var measureEl = document.createElement('div');
+        measureEl.setAttribute('aria-hidden', 'true');
+        measureEl.style.cssText = 'position:absolute;left:-9999px;top:0;visibility:hidden;white-space:pre-wrap;word-wrap:break-word;pointer-events:none;margin:0;border:none;padding:0;';
+        measureEl.style.fontSize = displayFontSize + 'px';
+        measureEl.style.fontFamily = editorFontFamily + ', sans-serif';
+        measureEl.style.lineHeight = '1.2';
+        pageElement.appendChild(measureEl);
+
+        function resizeEditorToContent() {
+            var val = editor.value || ' ';
+            measureEl.textContent = val;
+            var contentW = measureEl.offsetWidth;
+            var contentH = measureEl.offsetHeight;
+            var w = Math.max(60, Math.ceil(contentW) + paddingLeft * 2 + 4);
+            var h = Math.max(36, Math.ceil(contentH) + paddingTop * 2 + 4);
+            editor.style.width = w + 'px';
+            editor.style.height = h + 'px';
+        }
+
+        editor.addEventListener('input', resizeEditorToContent);
+        editor.addEventListener('keyup', resizeEditorToContent);
+        resizeEditorToContent();
+
+        editor.addEventListener('mousedown', function (event) { event.stopPropagation(); });
+        editor.addEventListener('click', function (event) { event.stopPropagation(); });
+        editor.addEventListener('dblclick', function (event) { event.stopPropagation(); });
+
+        editor.focus();
+        editor.select();
+
+        var committed = false;
+
+        function cleanup() {
+            try {
+                if (measureEl && measureEl.parentNode) {
+                    measureEl.parentNode.removeChild(measureEl);
+                }
+                editor.remove();
+            } catch (e) {}
+            setTool('cursor');
+        }
+
+        function commit() {
+            if (committed) {
+                return;
+            }
+            committed = true;
+
+            var content = String(editor.value || '').trim();
+            if (!content) {
+                cleanup();
+                return;
+            }
+
+            var pageState = getPageState(pageNumber);
+            if (!pageState) {
+                cleanup();
+                return;
+            }
+
+            var unscaledBoxX = (pointerX - paddingLeft) / state.scale;
+            var unscaledBoxY = (pointerY - paddingTop - caretOffset) / state.scale;
+
+            var measure = {
+                type: 'textbox',
+                x: 0,
+                y: 0,
+                width: 1,
+                height: 1,
+                size: editorFontSize,
+                font: editorFontFamily,
+                color: state.textColor || '#111827',
+                content: content
+            };
+
+            fitTextboxAroundContent(measure);
+
+            var annotation = {
+                type: 'textbox',
+                x: unscaledBoxX,
+                y: unscaledBoxY,
+                width: measure.width,
+                height: measure.height,
+                size: editorFontSize,
+                font: editorFontFamily,
+                color: state.textColor || '#111827',
+                content: content
+            };
+
+            ajax('create', {
+                page_Number: String(pageNumber),
+                annotation: JSON.stringify(annotation)
+            }).then(function (created) {
+                if (!created || !created.uuid) {
+                    return;
+                }
+                var createdGroup = drawAnnotation(pageNumber, created);
+                var pageState = getPageState(pageNumber);
+                if (pageState) {
+                    pageState.annotationLayer.draw();
+                }
+                if (createdGroup) {
+                    selectAnnotation(pageNumber, createdGroup);
+                }
+                ensureCommentPanelVisible();
+                loadCommentsForAnnotation(created.uuid, created.type);
+            }).catch(function (error) {
+                console.error('Create annotation failed', error);
+            }).finally(function () {
+                cleanup();
+            });
+        }
+
+        editor.addEventListener('blur', commit);
+        editor.addEventListener('keydown', function (event) {
+            if (event.key === 'Escape') {
+                committed = true;
+                cleanup();
+                return;
+            }
+            if (event.key === 'Enter' && (event.ctrlKey || event.metaKey)) {
+                event.preventDefault();
+                commit();
+            }
+        });
+    }
+
     function drawAnnotation(pageNumber, annotation) {
         
                 var pageState = getPageState(pageNumber);
@@ -1684,13 +1872,19 @@
                 width: boxWidth,
                 height: boxHeight,
                 cornerRadius: 7,
-                fill: 'rgba(235, 242, 252, 0.92)'
+                fill: 'rgba(235, 242, 252, 0.35)',
+                stroke: 'rgba(148, 163, 184, 0.65)',
+                strokeWidth: 1
             }));
             var textFontSize = Math.max(10, Math.round((annotation.size || state.textSize || 14) * scale));
+            var textPaddingX = 12;
+            var textPaddingY = 10;
+            var textX = Math.round(boxX + textPaddingX);
+            var textY = Math.round(boxY + textPaddingY);
             group.add(new Konva.Text({
-                x: boxX + 8,
-                y: boxY + 8,
-                width: Math.max(10, boxWidth - 16),
+                x: textX,
+                y: textY,
+                width: Math.max(10, boxWidth - textPaddingX * 2),
                 text: annotation.content || '',
                 fill: annotation.color || '#1f2937',
                 fontSize: textFontSize,

@@ -985,6 +985,13 @@ body {
     cursor: pointer !important;
 }
 
+/* Kursor I-beam dla narzędzia Textbox */
+.path-mod-pdfannotator #viewer.tl-tool-textbox,
+.path-mod-pdfannotator #viewer.tl-tool-textbox .tl-konva-host,
+.path-mod-pdfannotator #viewer.tl-tool-textbox .tl-pdf-canvas {
+    cursor: text;
+}
+
 /******************************************** START: mainly for overview page *******************************************/
 
 /******************************** OPTION 4
@@ -2289,14 +2296,33 @@ body.tl-pdf-fullscreen svg.annotationLayer {
 .tl-inline-text-editor {
     position: absolute;
     z-index: 30;
-    border: 0;
-    box-shadow: 0 2px 10px rgba(15, 23, 42, 0.14);
+    border: 1px solid rgba(148, 163, 184, 0.5) !important;
+    outline: none !important;
+    outline-width: 0 !important;
+    outline-style: none !important;
+    -webkit-appearance: none;
+    appearance: none;
+    box-shadow: 0 1px 6px rgba(15, 23, 42, 0.1);
     border-radius: 7px;
     padding: 10px 12px;
-    resize: both;
-    background: rgba(240, 246, 253, 0.97);
+    resize: none !important;
+    overflow: hidden;
+    background: rgba(240, 246, 253, 0.6);
     color: #111827;
     font-size: 14px;
+    -webkit-font-smoothing: subpixel-antialiased;
+    -moz-osx-font-smoothing: auto;
+    text-rendering: geometricPrecision;
+}
+
+.tl-inline-text-editor:focus,
+.tl-inline-text-editor:focus-visible,
+.tl-inline-text-editor:active {
+    outline: none !important;
+    outline-width: 0 !important;
+    outline-offset: 0 !important;
+    border-color: rgba(148, 163, 184, 0.5) !important;
+    box-shadow: 0 1px 6px rgba(15, 23, 42, 0.1) !important;
 }
 
 .tl-inline-text-editor::selection {
