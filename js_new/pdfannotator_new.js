@@ -731,7 +731,7 @@
                 getPageState(pageNumber).annotationLayer.add(drawing);
                 getPageState(pageNumber).annotationLayer.draw();
                 if (window['lazy-brush'] && window['lazy-brush'].LazyBrush) {
-                    drawingLazy = new window['lazy-brush'].LazyBrush({ radius: 20, enabled: true, initialPoint: { x: pointer.x, y: pointer.y } });
+                    drawingLazy = new window['lazy-brush'].LazyBrush({ radius: 10, enabled: true, initialPoint: { x: pointer.x, y: pointer.y } });
                 }
             } else {
                 draftRect = new Konva.Rect({
