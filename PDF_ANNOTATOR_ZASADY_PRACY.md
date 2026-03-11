@@ -30,7 +30,10 @@
 
 - **Edycja plików w `mod/pdfannotator/` (w tym chronionego pliku): wyłącznie przez skrypt.**  
   Skrypt: `mod/pdfannotator/edit-with-maintenance.sh`, uruchamiany z katalogu głównego Moodle (np. `/var/www/html/moodle`).
-- **Zabronione:** StrReplace, Write, EditNotebook do plików w `mod/pdfannotator/`.
+- **Wyjątek (bez maintenance):** pliki pomocnicze w katalogu pluginu, które **nie są używane w runtime** przez Moodle / PDF Annotator, np. logi, notatki, dokumentacja techniczna: `*.log`, `*.txt`, `*.md`.  
+  - Te pliki można edytować bez trybu maintenance i bez `edit-with-maintenance.sh` (np. zwykłą edycją w Cursorrze).  
+  - Nie wolno jednak do tego wyjątku zaliczać plików `.php`, `.js`, `.css`, plików językowych, konfiguracyjnych ani żadnych innych, które są ładowane przez Moodle lub front-end pluginu.
+- **Zabronione:** StrReplace, Write, EditNotebook do plików w `mod/pdfannotator/` poza powyższym wyjątkiem dla czysto pomocniczych plików `*.log` / `*.txt` / `*.md`.
 - **Dozwolone wyłącznie:**
   - Restore z backupu: `./mod/pdfannotator/edit-with-maintenance.sh --restore`
   - Dowolna edycja: `./mod/pdfannotator/edit-with-maintenance.sh --cmd '...'` (np. `sed`, `python3 << EOF ... EOF`).
@@ -124,10 +127,10 @@
 
 - **Zostawienie Moodle w trybie konserwacji** po zakończeniu promptu (niezależnie od przyczyny błędu). Po każdym wywołaniu `edit-with-maintenance.sh` w tym samym bashu musi nastąpić `php admin/cli/maintenance.php --disable`.
 - W ramach jednego promptu użytkownika: wielokrotne wywołania `edit-with-maintenance.sh` (więcej niż jedno włączenie trybu konserwacji).
-- Edycja plików w `mod/pdfannotator/` narzędziami Cursora (StrReplace, Write, EditNotebook).
+- Edycja plików w `mod/pdfannotator/` narzędziami Cursora (StrReplace, Write, EditNotebook) **z wyjątkiem** czysto pomocniczych plików `*.log` / `*.txt` / `*.md`, które nie są używane w runtime przez plugin.
 - Dzielenie rollbacku na dwa kroki (tylko jeden `--restore`).
 - Wykonywanie zmiany, gdy jakikolwiek test ma FAIL.
-- Wykonywanie zmiany w kodzie poza trybem maintenance (skrypt to zapewnia).
+- Wykonywanie zmiany w kodzie poza trybem maintenance (skrypt to zapewnia) – nie dotyczy zmian w pomocniczych plikach `*.log` / `*.txt` / `*.md`, które nie są ładowane przez Moodle / front‑end pluginu.
 
 ---
 
