@@ -2343,7 +2343,7 @@ body.tl-pdf-fullscreen .path-mod-pdfannotator .tl-save-textbox {
     -webkit-appearance: none;
     appearance: none;
     border-radius: 7px;
-    padding: 6px;
+    padding: 0.4em;
     resize: none !important;
     overflow: hidden;
     background: rgba(240, 246, 253, 0.6);

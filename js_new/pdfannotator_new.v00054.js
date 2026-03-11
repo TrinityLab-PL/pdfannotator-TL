@@ -1875,6 +1875,9 @@
         editor.addEventListener('input', resizeEditorToContentWithBtn);
         editor.addEventListener('keyup', resizeEditorToContentWithBtn);
         updateSaveBtnPos();
+        annotationData.width = editor.offsetWidth / (state.scale || 1);
+        annotationData.height = editor.offsetHeight / (state.scale || 1);
+        redrawOneAnnotation(pageNumber, annotationData.uuid, annotationData);
         editor.addEventListener('mousedown', function (event) { event.stopPropagation(); });
         editor.addEventListener('click', function (event) { event.stopPropagation(); });
         editor.addEventListener('dblclick', function (event) { event.stopPropagation(); });
@@ -1915,7 +1918,7 @@
                 wrappedH = wrapEl.offsetHeight / scale;
                 if (wrapEl.parentNode) { wrapEl.parentNode.removeChild(wrapEl); }
             })();
-            annotationData.width = Math.max(annotationData.width, editor.offsetWidth / scale);
+            annotationData.width = editor.offsetWidth / scale;
             annotationData.height = Math.max(annotationData.height, editor.offsetHeight / scale, wrappedH);
             redrawOneAnnotation(pageNumber, annotationData.uuid, annotationData);
             persistAnnotation(annotationData);
@@ -2108,7 +2111,7 @@
                 type: 'textbox',
                 x: unscaledBoxX,
                 y: unscaledBoxY,
-                width: Math.max(measure.width, editor.offsetWidth / scale),
+                width: editor.offsetWidth / scale,
                 height: Math.max(measure.height, editor.offsetHeight / scale, wrappedHeightUnscaled),
                 size: editorFontSize,
                 font: editorFontFamily,
@@ -2197,8 +2200,8 @@
         } else if (annotation.type === 'textbox') {
             var boxX = Math.round(annotation.x * scale);
             var boxY = Math.round(annotation.y * scale);
-            var boxWidth = Math.max(12, Math.round(annotation.width * scale));
-            var boxHeight = Math.max(12, Math.round(annotation.height * scale));
+            var boxWidth = Math.max(12, Math.ceil(annotation.width * scale));
+            var boxHeight = Math.max(12, Math.ceil(annotation.height * scale));
             group.add(new Konva.Rect({
                 x: boxX,
                 y: boxY,
