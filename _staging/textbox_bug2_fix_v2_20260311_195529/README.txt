@@ -1,0 +1,2 @@
+Snapshot before apply_textbox_bug2_fix_v2.py
+20260311_195529

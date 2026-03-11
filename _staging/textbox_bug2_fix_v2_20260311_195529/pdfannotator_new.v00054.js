@@ -1838,8 +1838,8 @@
         labelEl.style.fontFamily = (annotation.font || state.textFont || 'Open Sans') + ', sans-serif';
         labelEl.style.lineHeight = '1.25';
         labelEl.style.overflow = 'hidden';
-        labelEl.style.whiteSpace = 'pre';
-        labelEl.style.wordBreak = 'normal';
+        labelEl.style.whiteSpace = 'pre-wrap';
+        labelEl.style.wordBreak = 'break-word';
         labelEl.style.display = 'flex';
         labelEl.style.alignItems = 'flex-start';
         labelEl.style.justifyContent = 'flex-start';
@@ -1876,11 +1876,10 @@ function fitTextboxAroundContent(annotationData) {
 
         var lineHeight = fontSize * 1.25;
         var textHeight = Math.max(lineHeight, lines.length * lineHeight);
-        var paddingLeft = Math.round(0.4 * fontSize);
-        var paddingRight = paddingLeft + Math.round(0.4 * fontSize);
-        var paddingY = Math.round(0.4 * fontSize);
+        var paddingX = 6;
+        var paddingY = 5;
 
-        var newWidth = Math.max(40, Math.ceil(maxWidth + paddingLeft + paddingRight + 4));
+        var newWidth = Math.max(40, Math.ceil(maxWidth + paddingX * 2));
         var newHeight = Math.max(30, Math.ceil(textHeight + paddingY * 2));
 
         var oldWidth = Math.max(1, Number(annotationData.width) || newWidth);
@@ -2035,7 +2034,11 @@ function fitTextboxAroundContent(annotationData) {
                 wrappedH = wrapEl.offsetHeight / scale;
                 if (wrapEl.parentNode) { wrapEl.parentNode.removeChild(wrapEl); }
             })();
-            annotationData.width = (editor.offsetWidth + 2) / scale;
+            // Give the textbox a bit more horizontal room than the editor had,
+            // roughly ~1 character of extra width to avoid pushing the last
+            // glyph into a new wrapped line.
+            var extraWidth = Math.max(4, Math.round((displayFontSize || 14) * 0.7));
+            annotationData.width = (editor.offsetWidth + extraWidth) / scale;
             annotationData.height = Math.max(annotationData.height, editor.offsetHeight / scale, wrappedH);
             redrawOneAnnotation(pageNumber, annotationData.uuid, annotationData);
             logTextboxDebug({
