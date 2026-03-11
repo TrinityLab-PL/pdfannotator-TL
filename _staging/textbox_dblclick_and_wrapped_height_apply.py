@@ -22,94 +22,148 @@ new_after_drawing = """                setTool('cursor');
                 return;
             }
 
-            (function () {
-                if (!pointer) {
-                    state._lastTextboxClick = null;
-                    return;
-                }
+            if (pointer) {
                 var domTarget = event && event.evt && event.evt.target;
-                if (domTarget && domTarget.closest && (domTarget.closest('.tl-inline-text-editor') || domTarget.closest('.tl-save-textbox'))) {
-                    return;
-                }
-                var pageState = getPageState(pageNumber);
-                if (!pageState || !pageState.annotationLayer) {
-                    state._lastTextboxClick = null;
-                    return;
-                }
-                var hit = pageState.annotationLayer.getIntersection(pointer);
-                var hitGroup = null;
-                if (hit) {
-                    var n = hit;
-                    while (n) {
-                        if (n.getAttr && n.getAttr('annotationData')) {
-                            hitGroup = n;
-                            break;
+                if (!(domTarget && domTarget.closest && (domTarget.closest('.tl-inline-text-editor') || domTarget.closest('.tl-save-textbox')))) {
+                    var pageState = getPageState(pageNumber);
+                    if (pageState && pageState.annotationLayer) {
+                        var hit = pageState.annotationLayer.getIntersection(pointer);
+                        var hitGroup = null;
+                        if (hit) {
+                            var n = hit;
+                            while (n) {
+                                if (n.getAttr && n.getAttr('annotationData')) {
+                                    hitGroup = n;
+                                    break;
+                                }
+                                n = n.getParent && n.getParent();
+                            }
                         }
-                        n = n.getParent && n.getParent();
-                    }
-                }
-                if (!hitGroup) {
-                    var children = pageState.annotationLayer.getChildren();
-                    for (var i = children.length - 1; i >= 0; i--) {
-                        var gr = children[i];
-                        var ad = gr.getAttr && gr.getAttr('annotationData');
-                        if (!ad || ad.type !== 'textbox') { continue; }
-                        var rect = gr.getClientRect && gr.getClientRect();
-                        if (rect && pointer.x >= rect.x && pointer.x <= rect.x + rect.width && pointer.y >= rect.y && pointer.y <= rect.y + rect.height) {
-                            hitGroup = gr;
-                            break;
+                        if (!hitGroup) {
+                            var children = pageState.annotationLayer.getChildren();
+                            for (var i = children.length - 1; i >= 0; i--) {
+                                var gr = children[i];
+                                var ad = gr.getAttr && gr.getAttr('annotationData');
+                                if (!ad || ad.type !== 'textbox') { continue; }
+                                var rect = gr.getClientRect && gr.getClientRect();
+                                if (rect && pointer.x >= rect.x && pointer.x <= rect.x + rect.width && pointer.y >= rect.y && pointer.y <= rect.y + rect.height) {
+                                    hitGroup = gr;
+                                    break;
+                                }
+                            }
                         }
-                    }
-                }
-                if (hitGroup) {
-                    var data = hitGroup.getAttr('annotationData');
-                    if (data && data.type === 'textbox' && data.uuid) {
-                        var last = state._lastTextboxClick;
-                        if (last && last.uuid === data.uuid && (Date.now() - last.time) < 400) {
+                        if (hitGroup) {
+                            var data = hitGroup.getAttr('annotationData');
+                            if (data && data.type === 'textbox' && data.uuid) {
+                                var last = state._lastTextboxClick;
+                                if (last && last.uuid === data.uuid && (Date.now() - last.time) < 400) {
+                                    state._lastTextboxClick = null;
+                                    showTextboxEditor(pageNumber, data);
+                                    return;
+                                }
+                                state._lastTextboxClick = { time: Date.now(), pageNumber: pageNumber, uuid: data.uuid };
+                            } else {
+                                state._lastTextboxClick = null;
+                            }
+                        } else {
                             state._lastTextboxClick = null;
-                            showTextboxEditor(pageNumber, data);
-                            return;
                         }
-                        state._lastTextboxClick = { time: Date.now(), pageNumber: pageNumber, uuid: data.uuid };
                     } else {
                         state._lastTextboxClick = null;
                     }
-                } else {
-                    state._lastTextboxClick = null;
                 }
-            })();
-            if (state._lastTextboxClick && (Date.now() - state._lastTextboxClick.time) < 400) {
-                var justOpened = state._lastTextboxClick === null;
-            }
-            if (state._lastTextboxClick && state._lastTextboxClick.time && (Date.now() - state._lastTextboxClick.time) < 400) {
-                var check = state._lastTextboxClick;
-                if (check.pageNumber === pageNumber && getPageState(pageNumber)) {
-                    var skipRest = false;
-                    try {
-                        if (state._dblclickJustHandled) {
-                            skipRest = true;
-                            state._dblclickJustHandled = false;
-                        }
-                    } catch (e) {}
-                    if (skipRest) { return; }
-                }
+            } else {
+                state._lastTextboxClick = null;
             }
 
             if (tool === 'textbox' && pointer && !draftRect) {"""
 
-# Simplified: no IIFE so "return" exits mouseup handler. Let me simplify: when we call showTextboxEditor in the double-click block, we should return from the mouseup handler. So we need to wrap the double-click logic so that when we open the editor we return. The issue is the IIFE runs and might call showTextboxEditor and then we need to return from the outer mouseup. So instead of an IIFE that returns, we should do the logic inline and use a variable: var dblclickOpened = false; ... if (last && last.uuid === data.uuid && ...) { state._lastTextboxClick = null; showTextboxEditor(...); dblclickOpened = true; } ... then after the block, if (dblclickOpened) return;
-# Let me rewrite: no IIFE. Just the block. When we detect double-click we set state._dblclickJustHandled = true and call showTextboxEditor and return. So we need a simple block that when it opens the editor it returns. So:
-#   if (!pointer) { state._lastTextboxClick = null; }
-#   else {
-#     domTarget guard -> return
-#     pageState, hit test
-#     if hitGroup textbox:
-#       if last && same uuid && < 400ms: showTextboxEditor, _lastTextboxClick = null, return
-#       else: _lastTextboxClick = { ... }
-#     else: _lastTextboxClick = null
-#   }
-# So we don't need the IIFE. We just need to add the block and when we call showTextboxEditor we return. So the block ends with "return;" when we open. So the code is linear. Let me remove the IIFE and the confusing "justOpened" / "skipRest" stuff.
-</think>
-Upraszczając blok dwukliku: bez IIFE, po showTextboxEditor — return.
-<｜tool▁calls▁begin｜><｜tool▁call▁begin｜>
-StrReplace
+if old_after_drawing not in js:
+    raise SystemExit('1. mouseup double-click block not found')
+js = js.replace(old_after_drawing, new_after_drawing, 1)
+
+# --- 2. Bug 3: showNewTextboxEditor commit - wrapped height
+old_cnew = """            fitTextboxAroundContent(measure);
+
+            var scale = state.scale || 1;
+            var annotation = {
+                type: 'textbox',
+                x: unscaledBoxX,
+                y: unscaledBoxY,
+                width: Math.max(measure.width, editor.offsetWidth / scale),
+                height: Math.max(measure.height, editor.offsetHeight / scale),
+                size: editorFontSize,
+                font: editorFontFamily,
+                color: state.textColor || '#111827',
+                content: content
+            };"""
+new_cnew = """            fitTextboxAroundContent(measure);
+
+            var scale = state.scale || 1;
+            var wrappedHeightUnscaled = measure.height;
+            (function () {
+                var wrapEl = document.createElement('div');
+                wrapEl.setAttribute('aria-hidden', 'true');
+                wrapEl.style.cssText = 'position:absolute;left:-9999px;top:0;visibility:hidden;white-space:pre-wrap;word-wrap:break-word;margin:0;border:none;pointer-events:none;padding:6px;box-sizing:border-box;';
+                wrapEl.style.width = editor.offsetWidth + 'px';
+                wrapEl.style.fontSize = displayFontSize + 'px';
+                wrapEl.style.fontFamily = editorFontFamily + ', sans-serif';
+                wrapEl.style.lineHeight = '1.25';
+                wrapEl.textContent = content;
+                pageElement.appendChild(wrapEl);
+                wrappedHeightUnscaled = wrapEl.offsetHeight / scale;
+                if (wrapEl.parentNode) { wrapEl.parentNode.removeChild(wrapEl); }
+            })();
+            var annotation = {
+                type: 'textbox',
+                x: unscaledBoxX,
+                y: unscaledBoxY,
+                width: Math.max(measure.width, editor.offsetWidth / scale),
+                height: Math.max(measure.height, editor.offsetHeight / scale, wrappedHeightUnscaled),
+                size: editorFontSize,
+                font: editorFontFamily,
+                color: state.textColor || '#111827',
+                content: content
+            };"""
+if old_cnew not in js:
+    raise SystemExit('2. showNewTextboxEditor commit block not found')
+js = js.replace(old_cnew, new_cnew, 1)
+
+# --- 3. Bug 3: showTextboxEditor commit - wrapped height
+old_cshow = """            annotationData.content = editor.value || '';
+            annotationData.size = editorFontSize;
+            annotationData.font = editorFontFamily;
+            fitTextboxAroundContent(annotationData);
+            var scale = state.scale || 1;
+            annotationData.width = Math.max(annotationData.width, editor.offsetWidth / scale);
+            annotationData.height = Math.max(annotationData.height, editor.offsetHeight / scale);
+            redrawOneAnnotation(pageNumber, annotationData.uuid, annotationData);"""
+new_cshow = """            annotationData.content = editor.value || '';
+            annotationData.size = editorFontSize;
+            annotationData.font = editorFontFamily;
+            fitTextboxAroundContent(annotationData);
+            var scale = state.scale || 1;
+            var wrappedH = annotationData.height;
+            (function () {
+                var wrapEl = document.createElement('div');
+                wrapEl.setAttribute('aria-hidden', 'true');
+                wrapEl.style.cssText = 'position:absolute;left:-9999px;top:0;visibility:hidden;white-space:pre-wrap;word-wrap:break-word;margin:0;border:none;pointer-events:none;padding:6px;box-sizing:border-box;';
+                wrapEl.style.width = editor.offsetWidth + 'px';
+                wrapEl.style.fontSize = displayFontSize + 'px';
+                wrapEl.style.fontFamily = editorFontFamily + ', sans-serif';
+                wrapEl.style.lineHeight = '1.25';
+                wrapEl.textContent = annotationData.content || '';
+                pageElement.appendChild(wrapEl);
+                wrappedH = wrapEl.offsetHeight / scale;
+                if (wrapEl.parentNode) { wrapEl.parentNode.removeChild(wrapEl); }
+            })();
+            annotationData.width = Math.max(annotationData.width, editor.offsetWidth / scale);
+            annotationData.height = Math.max(annotationData.height, editor.offsetHeight / scale, wrappedH);
+            redrawOneAnnotation(pageNumber, annotationData.uuid, annotationData);"""
+if old_cshow not in js:
+    raise SystemExit('3. showTextboxEditor commit block not found')
+js = js.replace(old_cshow, new_cshow, 1)
+
+with open(JS, 'w', encoding='utf-8') as f:
+    f.write(js)
+print('textbox_dblclick_and_wrapped_height_apply: OK')
