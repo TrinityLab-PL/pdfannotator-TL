@@ -843,6 +843,7 @@ body {
 .path-mod-pdfannotator .chat-message-text {
     display: inline-block;
     width: 100%;
+    font-size: 14px;
 }
 
 .path-mod-pdfannotator :not(.questioncomment) > .chat-message-text p {
@@ -961,6 +962,7 @@ body {
 .path-mod-pdfannotator #comment-wrapper .editor_atto_content {
     width: 100%;
     min-height: 10em !important;
+    font-size: 14px;
 }
 
 .path-mod-pdfannotator .cursor-area * {
@@ -2267,7 +2269,7 @@ body.tl-pdf-fullscreen .path-mod-pdfannotator .tl-save-textbox {
 
 .tl-icon-highlight-marker {
     width: 18px;
-    height: 18px;
+    height: 20px;
     display: block;
     fill: currentColor;
 }

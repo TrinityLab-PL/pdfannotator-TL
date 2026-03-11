@@ -967,7 +967,6 @@
                     x: pointer.x / state.scale,
                     y: pointer.y / state.scale
                 });
-                setTool('cursor');
         bindVisibilityRecovery();
                 return;
             }
@@ -1098,7 +1097,6 @@
                         })]
                     });
                 }
-                setTool('cursor');
                 return;
             }
 
@@ -1239,7 +1237,6 @@
                 var annotation = rectToolPayload(tool, finalRect);
                 if (annotation) {
                     createAnnotation(pageNumber, annotation);
-                    setTool('cursor');
                 }
             }
         });
@@ -1304,7 +1301,6 @@
                 color: state.drawingStroke,
                 lines: [finalPoints.map(function (v) { return v / scale; })]
             });
-            setTool('cursor');
         });
     }
 
@@ -2607,14 +2603,14 @@ function fitTextboxAroundContent(annotationData) {
         } else if (annotation.type === 'highlight' || annotation.type === 'text' || annotation.type === 'strikeout') {
             var rectangles = normalizeRectangles(annotation.rectangles);
             rectangles.forEach(function (rect) {
-                var color = annotation.type === 'strikeout' ? '#f43f5e' : (annotation.color || '#fff70f');
+                var color = annotation.type === 'strikeout' ? '#6b7280' : (annotation.color || '#fff70f');
                 var isStrikeout = annotation.type === 'strikeout';
                 var rectShape = new Konva.Rect({
                     x: rect.x1 * scale,
                     y: rect.y1 * scale,
                     width: (rect.x2 - rect.x1) * scale,
                     height: (rect.y2 - rect.y1) * scale,
-                    fill: isStrikeout ? 'rgba(244, 63, 94, 0.10)' : 'rgba(255, 247, 15, 0.33)',
+                    fill: isStrikeout ? 'rgba(51, 51, 51, 0.25)' : 'rgba(255, 247, 15, 0.33)',
                     stroke: isStrikeout ? color : undefined,
                     strokeEnabled: isStrikeout,
                     strokeWidth: isStrikeout ? 1 : 0
