@@ -871,6 +871,7 @@
         var drawing = null;
         var draftRect = null;
         var draftStart = null;
+        var drawingLazy = null;
 
         stage.on('mousedown touchstart', function (event) {
             var tool = state.activeTool;
@@ -915,6 +916,9 @@
                 });
                 getPageState(pageNumber).annotationLayer.add(drawing);
                 getPageState(pageNumber).annotationLayer.draw();
+                if (window['lazy-brush'] && window['lazy-brush'].LazyBrush) {
+                    drawingLazy = new window['lazy-brush'].LazyBrush({ radius: 20, enabled: true, initialPoint: { x: pointer.x, y: pointer.y } });
+                }
             } else {
                 draftRect = new Konva.Rect({
                     x: pointer.x,
@@ -937,7 +941,14 @@
                 return;
             }
             if (drawing) {
-                var points = drawing.points().concat([pointer.x, pointer.y]);
+                var points;
+                if (drawingLazy && window['lazy-brush']) {
+                    drawingLazy.update({ x: pointer.x, y: pointer.y });
+                    var brush = drawingLazy.getBrushCoordinates();
+                    points = drawing.points().concat([brush.x, brush.y]);
+                } else {
+                    points = drawing.points().concat([pointer.x, pointer.y]);
+                }
                 drawing.points(points);
                 getPageState(pageNumber).annotationLayer.batchDraw();
             }
@@ -955,6 +966,7 @@
                 var linePoints = drawing.points();
                 drawing.destroy();
                 drawing = null;
+                drawingLazy = null;
                 getPageState(pageNumber).annotationLayer.draw();
 
                 if (linePoints.length >= 4) {
@@ -1026,10 +1038,6 @@
             }
 
             if (tool === 'textbox' && pointer && !draftRect) {
-                if (state.ignoreNextTextboxClick) {
-                    state.ignoreNextTextboxClick = false;
-                    return;
-                }
                 var domTarget = event && event.evt && event.evt.target;
                 if (domTarget && domTarget.closest && (domTarget.closest('.tl-inline-text-editor') || domTarget.closest('.tl-textbox-label') || domTarget.closest('.tl-save-textbox'))) {
                     return;
@@ -1060,6 +1068,13 @@
                             hitGroup = gr;
                             break;
                         }
+                    }
+                }
+                if (state.ignoreNextTextboxClick) {
+                    state.ignoreNextTextboxClick = false;
+                    if (hitGroup) {
+                        var ignData = hitGroup.getAttr('annotationData');
+                        if (ignData && ignData.type === 'textbox') { return; }
                     }
                 }
                 if (hitGroup) {
@@ -1877,7 +1892,11 @@
         updateSaveBtnPos();
         annotationData.width = editor.offsetWidth / (state.scale || 1);
         annotationData.height = editor.offsetHeight / (state.scale || 1);
-        redrawOneAnnotation(pageNumber, annotationData.uuid, annotationData);
+        var _repl = redrawOneAnnotation(pageNumber, annotationData.uuid, annotationData);
+        if (_repl) {
+            var _lbl = _repl.getAttr('textboxLabelEl');
+            if (_lbl) { _lbl.style.visibility = 'hidden'; }
+        }
         editor.addEventListener('mousedown', function (event) { event.stopPropagation(); });
         editor.addEventListener('click', function (event) { event.stopPropagation(); });
         editor.addEventListener('dblclick', function (event) { event.stopPropagation(); });
@@ -2212,9 +2231,9 @@
                 stroke: 'rgba(235, 242, 252, 0.35)',
                 strokeWidth: 0
             }));
-            var textPaddingX = 6;
-            var textPaddingY = 5;
             var textFontSizePx = Math.max(10, Math.round((annotation.size || state.textSize || 14) * scale));
+            var textPaddingX = Math.round(0.4 * textFontSizePx);
+            var textPaddingY = Math.round(0.4 * textFontSizePx);
             var labelEl = document.createElement('div');
             labelEl.className = 'tl-textbox-label';
             labelEl.setAttribute('data-annotation-id', String(annotation.uuid || ''));
