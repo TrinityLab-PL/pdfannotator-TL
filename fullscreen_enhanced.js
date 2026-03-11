@@ -25,12 +25,12 @@
         var iconStyle = 'font-size:22px;line-height:0;display:block;';
         if (inFullscreen) {
             btn.innerHTML = "<i class=\"fa fa-compress\" style=\"" + iconStyle + "\"></i>";
-            btn.title = "Exit full screen (ESC)";
-            if (btn.setAttribute) btn.setAttribute('aria-label', 'Exit full screen (ESC)');
+            if (btn.setAttribute) { btn.setAttribute('data-tooltip-text', 'Exit full screen (ESC)'); btn.setAttribute('aria-label', 'Exit full screen (ESC)'); }
+            btn.title = '';
         } else {
             btn.innerHTML = "<i class=\"fa fa-expand\" style=\"" + iconStyle + "\"></i>";
-            btn.title = "Full screen (ESC to exit)";
-            if (btn.setAttribute) btn.setAttribute('aria-label', 'Full screen (ESC to exit)');
+            if (btn.setAttribute) { btn.setAttribute('data-tooltip-text', 'Full screen (ESC to exit)'); btn.setAttribute('aria-label', 'Full screen (ESC to exit)'); }
+            btn.title = '';
         }
     }
 
@@ -124,7 +124,7 @@
                 fullscreenBtn.id = "tl-fullscreen-btn";
                 fullscreenBtn.className = "btn btn-secondary";
                 fullscreenBtn.innerHTML = "<i class=\"fa fa-expand\" style=\"font-size:22px;\"></i>";
-                fullscreenBtn.title = "Full screen (ESC to exit)";
+                fullscreenBtn.setAttribute('data-tooltip-text', 'Full screen (ESC to exit)'); fullscreenBtn.title = '';
                 fullscreenBtn.style.marginLeft = "5em";
                 fullscreenBtn.style.minWidth = "42px";
                 fullscreenBtn.style.minHeight = "38px";
@@ -137,7 +137,7 @@
         }
         fullscreenBtn.id = 'tl-fullscreen-btn';
         fullscreenBtn.innerHTML = "<i class=\"fa fa-expand\" style=\"font-size:22px;\"></i>";
-        fullscreenBtn.title = "Full screen (ESC to exit)";
+        fullscreenBtn.setAttribute('data-tooltip-text', 'Full screen (ESC to exit)'); fullscreenBtn.title = '';
         fullscreenBtn.style.marginLeft = "5em";
         fullscreenBtn.style.minWidth = "42px";
         fullscreenBtn.style.minHeight = "38px";
@@ -147,12 +147,12 @@
             if (!fsBtn) return;
             if (inFullscreen) {
                 fsBtn.innerHTML = "<i class=\"fa fa-compress\" style=\"font-size:22px;\"></i>";
-                fsBtn.title = "Exit full screen (ESC)";
-                if (fsBtn.setAttribute) fsBtn.setAttribute('aria-label', 'Exit full screen (ESC)');
+                if (fsBtn.setAttribute) { fsBtn.setAttribute('data-tooltip-text', 'Exit full screen (ESC)'); fsBtn.setAttribute('aria-label', 'Exit full screen (ESC)'); }
+                fsBtn.title = '';
             } else {
                 fsBtn.innerHTML = "<i class=\"fa fa-expand\" style=\"font-size:22px;\"></i>";
-                fsBtn.title = "Full screen (ESC to exit)";
-                if (fsBtn.setAttribute) fsBtn.setAttribute('aria-label', 'Full screen (ESC to exit)');
+                if (fsBtn.setAttribute) { fsBtn.setAttribute('data-tooltip-text', 'Full screen (ESC to exit)'); fsBtn.setAttribute('aria-label', 'Full screen (ESC to exit)'); }
+                fsBtn.title = '';
             }
         }
 

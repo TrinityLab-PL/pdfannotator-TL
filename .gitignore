@@ -1,0 +1,4 @@
+_backups/
+.cursor/
+*.log
+js_new/*.tooltip_rollback

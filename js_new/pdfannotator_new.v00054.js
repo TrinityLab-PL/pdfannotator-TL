@@ -19,10 +19,10 @@
         activeAnnotation: null,
         deleteButton: null,
         deleteButtonPage: null,
-        drawingStroke: '#d61f26',
+        drawingStroke: '#ae090f',
         textColor: '#1f2937',
         annotationColor: '#fff70f',
-        strokeWidth: 2,
+        strokeWidth: 7,
         textSize: 14,
         textFont: 'Open Sans',
         commentTarget: null,
@@ -500,16 +500,16 @@
             '<button type="button" data-proxy-tool="cursor" title="Cursor"><i class="fa fa-mouse-pointer"></i></button>',
             '<button type="button" data-proxy-tool="point" title="Point"><i class="fa fa-map-pin"></i></button>',
             '<button type="button" data-proxy-tool="area" title="Area"><i class="fa fa-square-o"></i></button>',
-            '<button type="button" data-proxy-tool="drawing" title="Drawing"><i class="fa fa-paint-brush"></i></button>',
+            '<button type="button" data-proxy-tool="drawing" title=""><i class="fa fa-paint-brush"></i></button>',
             '<button type="button" data-proxy-tool="textbox" title="Textbox"><i class="fa fa-font"></i></button>',
             '<button type="button" data-proxy-tool="highlight" title="Highlight"><svg class="tl-icon-highlight-marker" viewBox="0 0 24 24" aria-hidden="true"><path d="M19.2 1.8l2.9 2.9a2.1 2.1 0 0 1 0 3L8.2 20.95H2.7v-6.1L16 1.8a2.2 2.2 0 0 1 3.2 0z"></path><path d="M14.3 4.3l5.2 5.2-1.7 1.7-5.2-5.2z"></path><path d="M2.2 22.75h12.2v5H2.2z"></path></svg></button>',
             '<button type="button" data-proxy-tool="strikeout" title="Strikeout"><i class="fa fa-strikethrough"></i></button>',
             '</div>',
             '<div class="tl-group tl-style">',
             '<label title="Color"><i class="fa fa-tint"></i></label>',
-            '<input type="color" data-proxy-style="color" value="#d61f26" />',
+            '<input type="color" data-proxy-style="color" value="#ae090f" />',
             '<label title="Stroke width"><span class="tl-style-glyph">W</span></label>',
-            '<select data-proxy-style="stroke-width" title="Stroke width"><option value="1">1</option><option value="2" selected>2</option><option value="3">3</option><option value="4">4</option><option value="5">5</option><option value="6">6</option><option value="7">7</option><option value="8">8</option><option value="9">9</option><option value="10">10</option><option value="11">11</option><option value="12">12</option><option value="13">13</option><option value="14">14</option><option value="15">15</option><option value="16">16</option><option value="17">17</option><option value="18">18</option><option value="19">19</option><option value="20">20</option></select>',
+            '<select data-proxy-style="stroke-width" title="Stroke width"><option value="0">0</option><option value="1">1</option><option value="2">2</option><option value="3">3</option><option value="4">4</option><option value="5">5</option><option value="6">6</option><option value="7" selected>7</option><option value="8">8</option><option value="9">9</option><option value="10">10</option><option value="11">11</option><option value="12">12</option><option value="13">13</option><option value="14">14</option><option value="15">15</option><option value="16">16</option><option value="17">17</option><option value="18">18</option><option value="19">19</option><option value="20">20</option></select>',
             '<label title="Text size"><span class="tl-style-glyph">A</span></label>',
             '<select data-proxy-style="text-size" title="Text size"><option value="9">9 pt</option><option value="10">10 pt</option><option value="11">11 pt</option><option value="12">12 pt</option><option value="14" selected>14 pt</option><option value="15">15 pt</option><option value="17">17 pt</option><option value="19">19 pt</option><option value="20">20 pt</option><option value="22">22 pt</option><option value="24">24 pt</option><option value="26">26 pt</option><option value="28">28 pt</option><option value="30">30 pt</option><option value="32">32 pt</option></select>',
             '<label title="Font family"><span class="tl-style-glyph">F</span></label>',
@@ -536,7 +536,7 @@
             '</div>',
             '<div class="tl-group tl-misc">',
             '<button type="button" data-proxy-action="toggle-comments" title="Comments"><i class="fa fa-comments"></i></button>',
-            '<button type="button" data-proxy-action="fullscreen" title="Browser fullscreen"><i class="fa fa-expand"></i></button>',
+            '<button type="button" data-proxy-action="fullscreen" title="Full screen (ESC to exit)"><i class="fa fa-expand"></i></button>',
             '</div>'
         ].join('');
         container.appendChild(shell);
@@ -547,6 +547,63 @@
                 setTool(tool);
             });
         });
+
+        (function () {
+            var drawingBtn = shell.querySelector('[data-proxy-tool="drawing"]');
+            if (drawingBtn) {
+                var tip = document.createElement('div');
+                tip.className = 'tl-drawing-tooltip';
+                tip.innerHTML = '<div style="text-align:center;font-size:1em;font-weight:400">Drawing</div><div style="text-align:left;padding-left:0.5em;font-size:0.8em;font-weight:300">To draw straight lines<br>press and hold Shift + draw.</div>';
+                tip.style.cssText = 'display:none;position:fixed;z-index:1000010;background:#333;color:#e6e6e6;padding:6px 10px;border-radius:4px;white-space:normal;pointer-events:none;font-family:"Open Sans",Arial,sans-serif;';
+                document.body.appendChild(tip);
+                var showTipTimer;
+                var DRAWING_TOOLTIP_DELAY = 700;
+                drawingBtn.addEventListener('mouseenter', function (e) {
+                    showTipTimer = setTimeout(function () {
+                        showTipTimer = null;
+                        var r = drawingBtn.getBoundingClientRect();
+                        tip.style.left = r.left + 'px';
+                        tip.style.top = (r.bottom + 8) + 'px';
+                        tip.style.display = 'block';
+                    }, DRAWING_TOOLTIP_DELAY);
+                });
+                drawingBtn.addEventListener('mouseleave', function () {
+                    if (showTipTimer) { clearTimeout(showTipTimer); showTipTimer = null; }
+                    tip.style.display = 'none';
+                });
+            }
+        })();
+
+        (function () {
+            var sharedTip = document.createElement('div');
+            sharedTip.className = 'tl-toolbar-tooltip';
+            sharedTip.innerHTML = '<div style="text-align:center;font-size:1em;font-weight:400"></div>';
+            sharedTip.style.cssText = 'display:none;position:fixed;z-index:1000010;background:#333;color:#e6e6e6;padding:6px 10px;border-radius:4px;white-space:normal;pointer-events:none;font-family:"Open Sans",Arial,sans-serif;';
+            document.body.appendChild(sharedTip);
+            var showTimer;
+            var TOOLTIP_DELAY = 700;
+            shell.querySelectorAll('[title]').forEach(function (el) {
+                if (!el.getAttribute('title') || el.getAttribute('title') === '') return;
+                if (el.getAttribute('data-proxy-tool') === 'drawing') return;
+                var text = el.getAttribute('title');
+                el.setAttribute('title', '');
+                el.addEventListener('mouseenter', function () {
+                    if (showTimer) clearTimeout(showTimer);
+                    showTimer = setTimeout(function () {
+                        showTimer = null;
+                        sharedTip.firstChild.textContent = (el.getAttribute('data-tooltip-text') || text);
+                        var r = el.getBoundingClientRect();
+                        sharedTip.style.left = r.left + 'px';
+                        sharedTip.style.top = (r.bottom + 8) + 'px';
+                        sharedTip.style.display = 'block';
+                    }, TOOLTIP_DELAY);
+                });
+                el.addEventListener('mouseleave', function () {
+                    if (showTimer) { clearTimeout(showTimer); showTimer = null; }
+                    sharedTip.style.display = 'none';
+                });
+            });
+        })();
 
         shell.querySelector('[data-proxy-action="zoom-in"]').addEventListener('click', function () {
             zoomBy(1);
@@ -589,7 +646,7 @@
         var fontFamilyInput = shell.querySelector('[data-proxy-style="font-family"]');
         if (colorInput) {
             var applyColor = function (event) {
-                var color = (event && event.target && event.target.value) ? event.target.value : '#d61f26';
+                var color = (event && event.target && event.target.value) ? event.target.value : '#ae090f';
                 state.drawingStroke = color;
                 state.textColor = color;
                 state.annotationColor = color;
@@ -600,7 +657,7 @@
         if (strokeInput) {
             strokeInput.addEventListener('change', function (event) {
                 var size = parseFloat(event.target.value);
-                if (Number.isFinite(size) && size > 0) {
+                if (Number.isFinite(size) && size >= 0) {
                     state.strokeWidth = size;
                 }
             });
@@ -887,6 +944,9 @@
         var draftRect = null;
         var draftStart = null;
         var drawingLazy = null;
+        var shiftPolyPoints = [];
+        var shiftPolyLine = null;
+        var shiftPolyPreview = null;
 
         stage.on('mousedown touchstart', function (event) {
             var tool = state.activeTool;
@@ -920,19 +980,43 @@
             draftStart = pointer;
 
             if (tool === 'drawing') {
-                var liveWidth = Math.max(1, (state.strokeWidth || 2) * state.scale);
-                drawing = new Konva.Line({
-                    points: [pointer.x, pointer.y],
-                    stroke: state.drawingStroke,
-                    strokeWidth: liveWidth,
-                    hitStrokeWidth: Math.max(10, liveWidth * 4),
-                    lineCap: 'round',
-                    lineJoin: 'round'
-                });
-                getPageState(pageNumber).annotationLayer.add(drawing);
-                getPageState(pageNumber).annotationLayer.draw();
-                if (window['lazy-brush'] && window['lazy-brush'].LazyBrush) {
-                    drawingLazy = new window['lazy-brush'].LazyBrush({ radius: 20, enabled: true, initialPoint: { x: pointer.x, y: pointer.y } });
+                if (event.evt && event.evt.shiftKey) {
+                    shiftPolyPoints.push(pointer.x, pointer.y);
+                    var liveWidthSP = state.strokeWidth === 0 ? 0 : Math.max(1, (state.strokeWidth || 2) * state.scale);
+                    if (!shiftPolyLine) {
+                        shiftPolyLine = new Konva.Line({
+                            points: shiftPolyPoints.slice(),
+                            stroke: state.drawingStroke,
+                            strokeWidth: liveWidthSP,
+                            lineCap: 'round',
+                            lineJoin: 'round'
+                        });
+                        getPageState(pageNumber).annotationLayer.add(shiftPolyLine);
+                    } else {
+                        shiftPolyLine.points(shiftPolyPoints.slice());
+                    }
+                    getPageState(pageNumber).annotationLayer.batchDraw();
+                } else {
+                    if (shiftPolyPoints.length > 0) {
+                        if (shiftPolyLine) { shiftPolyLine.destroy(); shiftPolyLine = null; }
+                        if (shiftPolyPreview) { shiftPolyPreview.destroy(); shiftPolyPreview = null; }
+                        shiftPolyPoints = [];
+                        getPageState(pageNumber).annotationLayer.batchDraw();
+                    }
+                    var liveWidth = state.strokeWidth === 0 ? 0 : Math.max(1, (state.strokeWidth || 2) * state.scale);
+                    drawing = new Konva.Line({
+                        points: [pointer.x, pointer.y],
+                        stroke: state.drawingStroke,
+                        strokeWidth: liveWidth,
+                        hitStrokeWidth: liveWidth === 0 ? 4 : Math.max(10, liveWidth * 4),
+                        lineCap: 'round',
+                        lineJoin: 'round'
+                    });
+                    getPageState(pageNumber).annotationLayer.add(drawing);
+                    getPageState(pageNumber).annotationLayer.draw();
+                    if (window['lazy-brush'] && window['lazy-brush'].LazyBrush) {
+                        drawingLazy = new window['lazy-brush'].LazyBrush({ radius: 20, enabled: true, initialPoint: { x: pointer.x, y: pointer.y } });
+                    }
                 }
             } else {
                 draftRect = new Konva.Rect({
@@ -965,6 +1049,26 @@
                     points = drawing.points().concat([pointer.x, pointer.y]);
                 }
                 drawing.points(points);
+                getPageState(pageNumber).annotationLayer.batchDraw();
+            }
+            if (shiftPolyPoints.length >= 2) {
+                var spLastX = shiftPolyPoints[shiftPolyPoints.length - 2];
+                var spLastY = shiftPolyPoints[shiftPolyPoints.length - 1];
+                var spPrevW = state.strokeWidth === 0 ? 0 : Math.max(1, (state.strokeWidth || 2) * state.scale);
+                if (!shiftPolyPreview) {
+                    shiftPolyPreview = new Konva.Line({
+                        points: [spLastX, spLastY, pointer.x, pointer.y],
+                        stroke: state.drawingStroke,
+                        strokeWidth: spPrevW,
+                        lineCap: 'round',
+                        dash: [6, 4]
+                    });
+                    getPageState(pageNumber).annotationLayer.add(shiftPolyPreview);
+                } else {
+                    shiftPolyPreview.stroke(state.drawingStroke);
+                    shiftPolyPreview.strokeWidth(spPrevW);
+                    shiftPolyPreview.points([spLastX, spLastY, pointer.x, pointer.y]);
+                }
                 getPageState(pageNumber).annotationLayer.batchDraw();
             }
             if (draftRect && draftStart) {
@@ -1180,6 +1284,27 @@
                     showTextboxEditor(pageNumber, data);
                 }
             }
+        });
+
+        document.addEventListener('keyup', function (ev) {
+            if (ev.key !== 'Shift') { return; }
+            if (state.activeTool !== 'drawing') { return; }
+            if (shiftPolyPoints.length === 0) { return; }
+            var ps = getPageState(pageNumber);
+            if (shiftPolyLine) { shiftPolyLine.destroy(); shiftPolyLine = null; }
+            if (shiftPolyPreview) { shiftPolyPreview.destroy(); shiftPolyPreview = null; }
+            var finalPoints = shiftPolyPoints.slice();
+            shiftPolyPoints = [];
+            if (ps) { ps.annotationLayer.batchDraw(); }
+            if (finalPoints.length < 4) { return; }
+            var scale = state.scale || 1;
+            createAnnotation(pageNumber, {
+                type: 'drawing',
+                width: state.strokeWidth,
+                color: state.drawingStroke,
+                lines: [finalPoints.map(function (v) { return v / scale; })]
+            });
+            setTool('cursor');
         });
     }
 
@@ -2469,12 +2594,12 @@ function fitTextboxAroundContent(annotationData) {
                 var scaledPoints = normalized.map(function (value) {
                     return value * scale;
                 });
-                var lineWidth = Math.max(1, (annotation.width || 2) * scale);
+                var lineWidth = annotation.width === 0 ? 0 : Math.max(1, (annotation.width || 2) * scale);
                 group.add(new Konva.Line({
                     points: scaledPoints,
                     stroke: annotation.color || '#ef4444',
                     strokeWidth: lineWidth,
-                    hitStrokeWidth: Math.max(10, lineWidth * 4),
+                    hitStrokeWidth: lineWidth === 0 ? 4 : Math.max(10, lineWidth * 4),
                     lineCap: 'round',
                     lineJoin: 'round'
                 }));
