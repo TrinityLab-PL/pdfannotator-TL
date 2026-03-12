@@ -5020,6 +5020,9 @@ function startIndex(
                                                     $('#myModal').remove();
                                                 });
                                                 elemUse.addEventListener('mouseover', function () {
+                                                    // #region agent log
+                                                    fetch('http://localhost:53261/ingest/92a1b3d4-61b3-42a6-84e0-3064bb7202b1',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'b7f52d'},body:JSON.stringify({sessionId:'b7f52d',runId:'pre-fix',hypothesisId:'H4',location:'shared/index.js:toolbar:createEditOverlay',message:'call createEditOverlay from toolbar',data:{},timestamp:Date.now()})}).catch(function(){});
+                                                    // #endregion agent log
                                                     _editoverlay.createEditOverlay(target[innerI]);
                                                 });
                                                 elemUse.addEventListener('mouseout', function () {
@@ -7239,6 +7242,9 @@ function startIndex(
                                         var rect = (0, _utils.getAnnotationRect)(target);
                                         var realRect = target.getBoundingClientRect();
                                         var annotType = target.getAttribute('data-pdf-annotate-type');
+                                        // #region agent log
+                                        fetch('http://localhost:53261/ingest/92a1b3d4-61b3-42a6-84e0-3064bb7202b1',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'b7f52d'},body:JSON.stringify({sessionId:'b7f52d',runId:'pre-fix',hypothesisId:'H3',location:'shared/index.js:createEditOverlay',message:'createEditOverlay enter',data:{annotType:annotType, nodeName:target.nodeName && target.nodeName.toLowerCase ? target.nodeName.toLowerCase() : null},timestamp:Date.now()})}).catch(function(){});
+                                        // #endregion agent log
                                         var isRectangle = (target.nodeName.toLowerCase() === 'rect' || (target.nodeName.toLowerCase() === 'svg' && (annotType === 'area' || annotType === 'highlight'))) && !['point'].includes(annotType);
                                         var pageEl = target.closest('.page');
                                         var pageRect = pageEl.getBoundingClientRect();
@@ -7533,16 +7539,15 @@ var _logD={sessionId:'7d36cc',location:'createEditOverlay',message:'drawing FF',
                                  */ function handleDocumentMousedown(e) {
                                     if (e.target !== overlay) {
                                         return;
-                                    } // Highlight and strikeout annotations are bound to text within the document.
-                                    // It doesn't make sense to allow repositioning these types of annotations.
+                                    }
                                     var annotationId = overlay.getAttribute('data-target-id');
+                                    // #region agent log
+                                    fetch('http://localhost:53261/ingest/92a1b3d4-61b3-42a6-84e0-3064bb7202b1',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'b7f52d'},body:JSON.stringify({sessionId:'b7f52d',runId:'pre-fix',hypothesisId:'H1',location:'shared/index.js:handleDocumentMousedown',message:'mousedown on overlay',data:{},timestamp:Date.now()})}).catch(function(){});
+                                    // #endregion agent log
                                     var target = document.querySelector(
                                         '[data-pdf-annotate-id="' + annotationId + '"]'
                                     );
                                     var type = target.getAttribute('data-pdf-annotate-type');
-                                    if (type === 'highlight' || type === 'strikeout') {
-                                        return;
-                                    }
                                     isDragging = true;
                                     dragOffsetX = e.clientX;
                                     dragOffsetY = e.clientY;
@@ -7636,14 +7641,30 @@ var _logD={sessionId:'7d36cc',location:'createEditOverlay',message:'drawing FF',
                                         .getAnnotation(documentId, annotationId)
                                         .then(
                                             function (annotation) {
+                                                // #region agent log
+                                                fetch('http://localhost:53261/ingest/92a1b3d4-61b3-42a6-84e0-3064bb7202b1',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'b7f52d'},body:JSON.stringify({sessionId:'b7f52d',runId:'pre-fix',hypothesisId:'H2',location:'shared/index.js:handleDocumentMouseup:getAnnotation',message:'mouseup getAnnotation',data:{},timestamp:Date.now()})}).catch(function(){});
+                                                // #endregion agent log
                                                 oldX = annotation['annotation'].x;
                                                 oldY = annotation['annotation'].y;
                                                 (0, _ajaxloader.showLoader)();
-                                                if (['area', 'point', 'textbox', 'text'].indexOf(type) > -1) {
+                                                if (['area', 'point', 'textbox', 'text'].indexOf(type) > -1 || type === 'highlight' || type === 'strikeout') {
                                                     (function () {
                                                         var _getDelta = getDelta('x', 'y');
                                                         var deltaX = _getDelta.deltaX;
                                                         var deltaY = _getDelta.deltaY;
+                                                        if (type === 'highlight' || type === 'strikeout') {
+                                                            var rects = (annotation['annotation'] && annotation['annotation'].rectangles) || annotation.rectangles;
+                                                            if (!rects || !rects.length) { return; }
+                                                            for (var ri = 0; ri < rects.length; ri++) {
+                                                                var r = rects[ri];
+                                                                var rx = parseFloat(r.x) || 0;
+                                                                var ry = parseFloat(r.y) || 0;
+                                                                r.x = rx + deltaX;
+                                                                r.y = ry + deltaY;
+                                                            }
+                                                            viewX = rects[0].x;
+                                                            viewY = rects[0].y;
+                                                        } else {
                                                         [].concat(_toConsumableArray(target)).forEach(function (t, i) {
                                                             // textbox/text may have multiple DOM nodes with same data-id;
                                                             // updating model from all of them causes random last-write wins.
@@ -7716,6 +7737,7 @@ var _logD={sessionId:'7d36cc',location:'createEditOverlay',message:'drawing FF',
                                                                 }
                                                             }
                                                         });
+                                                        } // end else area/point/textbox/text
                                                     })();
                                                 } else if (type === 'drawing') {
                                                     (function () {
@@ -10750,7 +10772,22 @@ var _logD={sessionId:'7d36cc',location:'createEditOverlay',message:'drawing FF',
                                             );
                                         case 'highlight':
                                         case 'strikeout':
-                                            //strikeout and highlight cannot be shifted, so they are the same
+                                            if (!annotationA.rectangles || !annotationB.rectangles) {
+                                                return annotationA.rectangles === annotationB.rectangles;
+                                            }
+                                            if (annotationA.rectangles.length !== annotationB.rectangles.length) {
+                                                return false;
+                                            }
+                                            for (var ri = 0; ri < annotationA.rectangles.length; ri++) {
+                                                var ra = annotationA.rectangles[ri];
+                                                var rb = annotationB.rectangles[ri];
+                                                if (parseFloat(ra.x) !== parseFloat(rb.x) ||
+                                                    parseFloat(ra.y) !== parseFloat(rb.y) ||
+                                                    parseFloat(ra.width) !== parseFloat(rb.width) ||
+                                                    parseFloat(ra.height) !== parseFloat(rb.height)) {
+                                                    return false;
+                                                }
+                                            }
                                             return true;
                                         case 'point':
                                             return (
@@ -10791,6 +10828,31 @@ var _logD={sessionId:'7d36cc',location:'createEditOverlay',message:'drawing FF',
 
                                             node.setAttribute('y', y);
                                             node.setAttribute('x', x);
+                                        })();
+                                    } else if (type === 'highlight' || type === 'strikeout') {
+                                        (function () {
+                                            var rects = annotation.rectangles;
+                                            var children = node.children;
+                                            if (!rects || !rects.length || !children || !children.length) { return; }
+                                            for (var i = 0; i < children.length && i < rects.length; i++) {
+                                                var child = children[i];
+                                                var r = rects[i];
+                                                var rx = parseFloat(r.x) || 0;
+                                                var ry = parseFloat(r.y) || 0;
+                                                var rw = parseFloat(r.width) || 0;
+                                                var rh = parseFloat(r.height) || 0;
+                                                if (child.nodeName.toLowerCase() === 'rect') {
+                                                    child.setAttribute('x', rx);
+                                                    child.setAttribute('y', ry);
+                                                    child.setAttribute('width', rw);
+                                                    child.setAttribute('height', rh);
+                                                } else if (child.nodeName.toLowerCase() === 'line') {
+                                                    child.setAttribute('x1', rx);
+                                                    child.setAttribute('y1', ry);
+                                                    child.setAttribute('x2', rx + rw);
+                                                    child.setAttribute('y2', ry);
+                                                }
+                                            }
                                         })();
                                     } else if (type === 'drawing') {
                                         (function () {
