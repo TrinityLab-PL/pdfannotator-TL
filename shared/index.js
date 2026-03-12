@@ -7932,7 +7932,8 @@ var _logD={sessionId:'7d36cc',location:'createEditOverlay',message:'drawing FF',
                                         var toggleBtn = document.getElementById("tl-toggle-comments");
                                         if (toggleBtn) toggleBtn.innerHTML = '<i class="fa fa-chevron-right"></i> Close comments';
                                     }
-                                    if (isDragging) {
+                                    var _annotType = target ? target.getAttribute('data-pdf-annotate-type') : null;
+                                    if (isDragging && _annotType !== 'highlight' && _annotType !== 'strikeout') {
                                         return;
                                     }
                                     createEditOverlay(target);
