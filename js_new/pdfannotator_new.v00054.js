@@ -962,12 +962,48 @@
             }
 
             if (tool === 'point') {
+                var pageState = getPageState(pageNumber);
+                var hitGroup = null;
+                if (pageState && pageState.annotationLayer) {
+                    var hit = pageState.annotationLayer.getIntersection(pointer);
+                    if (hit) {
+                        var n = hit;
+                        while (n) {
+                            if (n.getAttr && n.getAttr('annotationData')) {
+                                hitGroup = n;
+                                break;
+                            }
+                            n = n.getParent ? n.getParent() : null;
+                        }
+                    }
+                    if (!hitGroup) {
+                        var children = pageState.annotationLayer.getChildren();
+                        for (var i = children.length - 1; i >= 0; i--) {
+                            var gr = children[i];
+                            var ad = gr.getAttr && gr.getAttr('annotationData');
+                            if (!ad || ad.type !== 'point') { continue; }
+                            var rect = gr.getClientRect && gr.getClientRect();
+                            if (rect && pointer.x >= rect.x && pointer.x <= rect.x + rect.width && pointer.y >= rect.y && pointer.y <= rect.y + rect.height) {
+                                hitGroup = gr;
+                                break;
+                            }
+                        }
+                    }
+                }
+                if (hitGroup) {
+                    state._pointClickSelect = true;
+                    selectAnnotation(pageNumber, hitGroup);
+                    if (hitGroup.getAttr && hitGroup.getAttr('annotationData') && hitGroup.getAttr('annotationData').type !== 'point') {
+                        setTool('cursor');
+                    }
+                    return;
+                }
                 createAnnotation(pageNumber, {
                     type: 'point',
                     x: pointer.x / state.scale,
                     y: pointer.y / state.scale
                 });
-        bindVisibilityRecovery();
+                bindVisibilityRecovery();
                 return;
             }
 
@@ -979,6 +1015,42 @@
             draftStart = pointer;
 
             if (tool === 'drawing') {
+                var pageStateDraw = getPageState(pageNumber);
+                var hitGroupDraw = null;
+                if (pageStateDraw && pageStateDraw.annotationLayer) {
+                    var hitDraw = pageStateDraw.annotationLayer.getIntersection(pointer);
+                    if (hitDraw) {
+                        var nDraw = hitDraw;
+                        while (nDraw) {
+                            if (nDraw.getAttr && nDraw.getAttr('annotationData')) {
+                                hitGroupDraw = nDraw;
+                                break;
+                            }
+                            nDraw = nDraw.getParent ? nDraw.getParent() : null;
+                        }
+                    }
+                    if (!hitGroupDraw) {
+                        var childrenDraw = pageStateDraw.annotationLayer.getChildren();
+                        for (var d = childrenDraw.length - 1; d >= 0; d--) {
+                            var grDraw = childrenDraw[d];
+                            var adDraw = grDraw.getAttr && grDraw.getAttr('annotationData');
+                            if (!adDraw) { continue; }
+                            var rectDraw = grDraw.getClientRect && grDraw.getClientRect();
+                            if (rectDraw && pointer.x >= rectDraw.x && pointer.x <= rectDraw.x + rectDraw.width && pointer.y >= rectDraw.y && pointer.y <= rectDraw.y + rectDraw.height) {
+                                hitGroupDraw = grDraw;
+                                break;
+                            }
+                        }
+                    }
+                }
+                if (hitGroupDraw) {
+                    state._pointClickSelect = true;
+                    selectAnnotation(pageNumber, hitGroupDraw);
+                    if (hitGroupDraw.getAttr && hitGroupDraw.getAttr('annotationData') && hitGroupDraw.getAttr('annotationData').type !== 'drawing') {
+                        setTool('cursor');
+                    }
+                    return;
+                }
                 if (event.evt && event.evt.shiftKey) {
                     shiftPolyPoints.push(pointer.x, pointer.y);
                     var liveWidthSP = state.strokeWidth === 0 ? 0 : Math.max(1, (state.strokeWidth || 2) * state.scale);
@@ -1018,6 +1090,45 @@
                     }
                 }
             } else {
+                if (tool === 'area' || tool === 'highlight' || tool === 'strikeout') {
+                    var pageStateRect = getPageState(pageNumber);
+                    var hitGroupRect = null;
+                    if (pageStateRect && pageStateRect.annotationLayer) {
+                        var hitRect = pageStateRect.annotationLayer.getIntersection(pointer);
+                        if (hitRect) {
+                            var nRect = hitRect;
+                            while (nRect) {
+                                if (nRect.getAttr && nRect.getAttr('annotationData')) {
+                                    hitGroupRect = nRect;
+                                    break;
+                                }
+                                nRect = nRect.getParent ? nRect.getParent() : null;
+                            }
+                        }
+                        if (!hitGroupRect) {
+                            var childrenRect = pageStateRect.annotationLayer.getChildren();
+                            for (var r = childrenRect.length - 1; r >= 0; r--) {
+                                var grRect = childrenRect[r];
+                                var adRect = grRect.getAttr && grRect.getAttr('annotationData');
+                                if (!adRect) { continue; }
+                                var rectRect = grRect.getClientRect && grRect.getClientRect();
+                                if (rectRect && pointer.x >= rectRect.x && pointer.x <= rectRect.x + rectRect.width && pointer.y >= rectRect.y && pointer.y <= rectRect.y + rectRect.height) {
+                                    hitGroupRect = grRect;
+                                    break;
+                                }
+                            }
+                        }
+                    }
+                    if (hitGroupRect) {
+                        state._pointClickSelect = true;
+                        selectAnnotation(pageNumber, hitGroupRect);
+                        var adTypeRect = hitGroupRect.getAttr && hitGroupRect.getAttr('annotationData') && hitGroupRect.getAttr('annotationData').type;
+                        if (adTypeRect !== tool) {
+                            setTool('cursor');
+                        }
+                        return;
+                    }
+                }
                 draftRect = new Konva.Rect({
                     x: pointer.x,
                     y: pointer.y,
@@ -1101,7 +1212,10 @@
             }
 
             if (pointer) {
-                clearSelection();
+                if (!state._pointClickSelect) {
+                    clearSelection();
+                }
+                state._pointClickSelect = false;
                 var domTarget = event && event.evt && event.evt.target;
                 if (!(domTarget && domTarget.closest && (domTarget.closest('.tl-inline-text-editor') || domTarget.closest('.tl-save-textbox')))) {
                     var pageState = getPageState(pageNumber);

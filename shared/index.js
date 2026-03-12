@@ -6370,7 +6370,7 @@ function startIndex(
                                 function _interopRequireDefault(obj) {
                                     return obj && obj.__esModule ? obj : { default: obj };
                                 }
-                                var SIZE = 22;
+                                var SIZE = 20;
                                 var D =
                                     'M499.968 214.336q-113.832 0 -212.877 38.781t-157.356 104.625 -58.311 142.29q0 62.496 39.897 119.133t112.437 97.929l48.546 27.9 -15.066 53.568q-13.392 50.778 -39.06 95.976 84.816 -35.154 153.45 -95.418l23.994 -21.204 31.806 3.348q38.502 4.464 72.54 4.464 113.832 0 212.877 -38.781t157.356 -104.625 58.311 -142.29 -58.311 -142.29 -157.356 -104.625 -212.877 -38.781z';
                                 /**
@@ -6383,37 +6383,56 @@ function startIndex(
                                     let posX = a.x;
                                     let posY = a.y;
 
+                                    let colorInner;
+                                    let colorLine;
+                                    if (a.color) {
+                                        colorInner = 'rgba(255,237,0,.8)';
+                                        colorLine = 'rgb(246,168,0)';
+                                    } else {
+                                        colorInner = 'rgba(142,186,229,.8)';
+                                        colorLine = 'rgb(0,84,159)';
+                                    }
+
                                     var outerSVG = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
                                     var innerSVG = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
-                                    var pathTeardrop = document.createElementNS('http://www.w3.org/2000/svg', 'path');
-                                    var pathCircle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+                                    var path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+                                    var path2 = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+                                    var circle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
                                     (0, _setAttributes2.default)(outerSVG, {
-                                        width: 16,
+                                        width: SIZE / 2 + 1,
                                         height: SIZE,
-                                        x: posX - 8,
+                                        x: posX - SIZE / 4,
                                         y: posY - SIZE,
                                     });
                                     (0, _setAttributes2.default)(innerSVG, {
-                                        width: 16,
+                                        width: SIZE,
                                         height: SIZE,
                                         x: 0,
-                                        y: 0,
-                                        viewBox: '-1500 -4222 3000 4222',
+                                        y: SIZE * 0.05 * -1,
+                                        viewBox: '-16 -18 64 64',
                                     });
-                                    (0, _setAttributes2.default)(pathTeardrop, {
-                                        d: 'M 1445,-2779 C 1445,-2526 1380,-2279 1252,-2059 1125,-1838 0,0 0,0 C 0,0 -1119,-1838 -1246,-2059 -1373,-2279 -1439,-2526 -1439,-2779 C -1439,-3033 -1372,-3281 -1246,-3501 -1119,-3722 -938,-3904 -718,-4031 -498,-4158 -250,-4222 4,-4222 C 257,-4222 504,-4156 724,-4030 945,-3903 1125,-3721 1248,-3500 1374,-3280 1441,-3033 1445,-2781 L 1445,-2779 Z',
-                                        fill: 'rgb(114,159,207)',
+                                    (0, _setAttributes2.default)(path, {
+                                        d: 'M0,47 Q0,28 10,15 A15,15 0,1,0 -10,15 Q0,28 0,47',
                                         stroke: 'none',
+                                        fill: colorInner,
+                                        transform: '',
                                     });
-                                    (0, _setAttributes2.default)(pathCircle, {
-                                        cx: 4,
-                                        cy: -2878,
-                                        r: 525,
-                                        fill: 'rgb(247,205,0)',
+                                    (0, _setAttributes2.default)(path2, {
+                                        d: 'M0,47 Q0,28 10,15 A15,15 0,1,0 -10,15 Q0,28 0,47',
+                                        strokeWidth: 1,
+                                        stroke: colorLine,
+                                        fill: 'none',
+                                    });
+                                    (0, _setAttributes2.default)(circle, {
+                                        cx: 0,
+                                        cy: 4,
+                                        r: 4,
                                         stroke: 'none',
+                                        fill: colorLine,
                                     });
-                                    innerSVG.appendChild(pathTeardrop);
-                                    innerSVG.appendChild(pathCircle);
+                                    innerSVG.appendChild(path);
+                                    innerSVG.appendChild(path2);
+                                    innerSVG.appendChild(circle);
                                     outerSVG.appendChild(innerSVG);
 
                                     return outerSVG;
