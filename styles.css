@@ -2640,3 +2640,10 @@ body:not(.tl-pdf-fullscreen) #viewer {
     box-shadow: none !important;
 }
 
+
+/* TL: toolbar icon color */
+#tl-express-toolbar button i,
+#tl-express-toolbar button svg {
+    color: #3b3e3e !important;
+    fill: #3b3e3e !important;
+}

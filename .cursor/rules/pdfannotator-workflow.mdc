@@ -12,7 +12,10 @@ alwaysApply: true
 
 Plik `mod/pdfannotator/shared/index.js` (oraz ewentualnie inne objęte skryptem) jest **chroniony**: jedyna dozwolona edycja to uruchomienie skryptu **edit-with-maintenance.sh**, który zawsze wykonuje: maintenance on → odblokowanie pliku → zmiana → purge → maintenance off → ponowne zablokowanie.
 
-- **NIGDY** nie używaj StrReplace, Write ani EditNotebook do plików w `mod/pdfannotator/`. Użycie ich do edycji chronionego pliku jest **zabronione**; jeśli plik jest ustawiony na tylko do odczytu (444), zapis i tak się nie powiedzie.
+**Wyjątek:** pliki o rozszerzeniach **`.log`**, **`.txt`**, **`.md`** w `mod/pdfannotator/` można dowolnie edytować (StrReplace, Write, polecenia w terminalu) **bez** trybu konserwacji — nie obowiązuje dla nich skrypt ani zakaz bezpośredniego zapisu.
+
+- **NIGDY** nie używaj StrReplace, Write ani EditNotebook do plików w `mod/pdfannotator/` **z wyjątkiem** plików `*.log`, `*.txt`, `*.md`. Użycie ich do edycji chronionego pliku jest **zabronione**; jeśli plik jest ustawiony na tylko do odczytu (444), zapis i tak się nie powiedzie.
+- **NIGDY** nie uruchamiaj w terminalu poleceń, które zapisują do plików w `mod/pdfannotator/` (np. `node skrypt.js`, `sed -i`, `patch`, `python -c`, `cp`), chyba że: (a) zapis dotyczy wyłącznie plików `*.log`, `*.txt`, `*.md` (wtedy dowolna komenda), albo (b) to polecenie jest **jedynym argumentem** do `edit-with-maintenance.sh --cmd '...'`. **Przed uruchomieniem dowolnej komendy w terminalu:** jeśli ona zmienia pliki pod `mod/pdfannotator/` inne niż .log/.txt/.md, MUSI być wykonana wyłącznie jako `./mod/pdfannotator/edit-with-maintenance.sh --cmd 'ta_komenda'` (z katalogu Moodle). Inaczej — nie uruchamiaj.
 - **ZAWSZE** wykonuj zmiany **wyłącznie** przez skrypt:
   - **Restore z backupu:**  
     `cd /var/www/html/moodle && ./mod/pdfannotator/edit-with-maintenance.sh --restore`
@@ -116,10 +119,12 @@ Jeśli testy są `OK` (lub `SYNTAX: SKIPPED` wyłącznie z powodu braku `node`),
 
 ## Zabronione
 
+- **Przywracanie jakichkolwiek starych wersji plików** (z backupów, rollbacków, git, kopii) **w całym projekcie bez wyraźnej zgody użytkownika.** Nie wolno samodzielnie decydować o przywróceniu starszej wersji – tylko na polecenie użytkownika lub po jego zgodzie.
+- **Uruchamianie w terminalu poleceń zapisujących do `mod/pdfannotator/`** (node, sed, patch, python z zapisem pliku itd.) bez opakowania w `edit-with-maintenance.sh --cmd '...'` — z wyjątkiem zapisu do plików `*.log`, `*.txt`, `*.md`.
 - **Zostawienie Moodle w trybie konserwacji** po zakończeniu promptu. Po każdym wywołaniu skryptu w tym samym bashu musi być `php admin/cli/maintenance.php --disable`.
 - Wielokrotne wywołania `edit-with-maintenance.sh` w ramach jednej odpowiedzi na jeden prompt (wielokrotne włączanie trybu konserwacji).
 
-- Używać StrReplace, Write, EditNotebook do zmiany plików w `mod/pdfannotator/`.
+- Używać StrReplace, Write, EditNotebook do zmiany plików w `mod/pdfannotator/` (z wyjątkiem `*.log`, `*.txt`, `*.md`).
 - Włączać konserwację w jednej komendzie, a zmiany robić w innej (zmiana wyłącznie wewnątrz skryptu).
 - Dzielić rollback na dwa kroki – tylko `./mod/pdfannotator/edit-with-maintenance.sh --restore` w jednym wywołaniu.
 

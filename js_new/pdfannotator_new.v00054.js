@@ -44,6 +44,34 @@
         initialLoadRetryCount: 0,
         bootstrapped: false
     };
+    var cursorCache = {};
+    var CURSOR_SIZE = 24;
+
+    function buildSvgCursor(tool) {
+        var f = '#4d5151';
+        var s = '';
+        if (tool === 'point') {
+            s = '<circle cx="12" cy="7" r="5" fill="' + f + '"/><line x1="12" y1="12" x2="12" y2="22" stroke="' + f + '" stroke-width="2.5" stroke-linecap="round"/>';
+        } else if (tool === 'area') {
+            s = '<rect x="2" y="2" width="20" height="20" fill="none" stroke="' + f + '" stroke-width="2.5"/>';
+        } else if (tool === 'drawing') {
+            s = '<path fill="' + f + '" d="M7 14c-1.66 0-3 1.34-3 3 0 1.31-1.16 2-2 2 .92 1.22 2.49 2 4 2 2.21 0 4-1.79 4-4 0-1.66-1.34-3-3-3zm13.71-9.37l-1.34-1.34c-.39-.39-1.02-.39-1.41 0L9 12.25 11.75 15l8.96-8.96c.39-.39.39-1.02 0-1.41z"/>';
+        } else if (tool === 'highlight') {
+            s = '<path fill="' + f + '" d="M19.2 1.8l2.9 2.9a2.1 2.1 0 0 1 0 3L8.2 20.95H2.7v-6.1L16 1.8a2.2 2.2 0 0 1 3.2 0z"/><path fill="' + f + '" d="M14.3 4.3l5.2 5.2-1.7 1.7-5.2-5.2z"/><rect x="1" y="22.5" width="14" height="1.5" fill="' + f + '"/>';
+        } else if (tool === 'strikeout') {
+            s = '<text x="1" y="16" font-family="Arial,sans-serif" font-size="18" font-weight="bold" fill="' + f + '">S</text><line x1="0" y1="9" x2="16" y2="9" stroke="' + f + '" stroke-width="2" stroke-linecap="round"/>';
+        }
+        var svg = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="' + CURSOR_SIZE + '" height="' + CURSOR_SIZE + '">' + s + '</svg>';
+        return 'data:image/svg+xml;base64,' + btoa(unescape(encodeURIComponent(svg)));
+    }
+
+    function getCursorDataUrlForTool(tool, callback) {
+        if (tool === 'cursor') { callback(null); return; }
+        if (cursorCache[tool]) { callback(cursorCache[tool]); return; }
+        var dataUrl = buildSvgCursor(tool);
+        if (dataUrl) { cursorCache[tool] = dataUrl; }
+        callback(dataUrl || null);
+    }
 
     function viewerEl() {
         return document.getElementById('viewer');
@@ -187,6 +215,22 @@
         var viewer = viewerEl();
         if (viewer) {
             viewer.classList.toggle('tl-tool-textbox', state.activeTool === 'textbox');
+            (function () {
+                var t = state.activeTool;
+                if (t === 'cursor') { viewer.style.cursor = 'default'; return; }
+                if (cursorCache[t]) {
+                    var h = (t === 'point') ? '12 22' : (t === 'area' ? '0 0' : (t === 'strikeout' ? '3 7' : '0 22'));
+                    viewer.style.cursor = 'url(' + cursorCache[t] + ') ' + h + ', auto';
+                    return;
+                }
+                getCursorDataUrlForTool(t, function (dataUrl) {
+                    var v = viewerEl();
+                    if (!v) return;
+                    if (!dataUrl) { v.style.cursor = 'default'; return; }
+                    var h = (t === 'point') ? '12 22' : ((t === 'area' || t === 'strikeout') ? '0 0' : '0 22');
+                    v.style.cursor = 'url(' + dataUrl + ') ' + h + ', auto';
+                });
+            })();
         }
         if (state.activeTool !== 'cursor') {
             clearSelection();
