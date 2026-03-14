@@ -22,6 +22,8 @@
 
 .path-mod-pdfannotator .pdfannotator_index .toolbar .spacer {
     display: inline-block;
+    border: none;
+    outline: none;
     border-left: 1px solid #c1c1c1;
     height: 34px;
     margin: 0 5px -11px;
@@ -29,6 +31,8 @@
 
 .path-mod-pdfannotator .toolbar .toolbaritem {
     display: inline-block;
+    border: none;
+    outline: none;
 }
 
 .path-mod-pdfannotator .toolbar button {
@@ -75,6 +79,8 @@
     border: 1px solid #000;
     vertical-align: middle;
     margin: 0;
+    outline: none;
+    box-shadow: none;
 }
 .path-mod-pdfannotator .color-selected {
     border: 3px solid #666;
@@ -83,6 +89,7 @@
     margin-top: -1px;
     margin-left: -2px;
     margin-right: -2px;
+    box-shadow: none;
 }
 
 .path-mod-pdfannotator .text-color,
@@ -90,6 +97,9 @@
 .path-mod-pdfannotator .pen-color {
     z-index: 100;
     display: inline-block;
+    border: none;
+    outline: none;
+    box-shadow: none;
 }
 
 
@@ -2299,10 +2309,38 @@ body.tl-pdf-fullscreen .path-mod-pdfannotator .tl-save-textbox {
     line-height: 1;
 }
 
-.tl-express-toolbar .tl-style input[type="color"] {
+.tl-express-toolbar .tl-style .tl-color-picker-wrapper {
+    display: inline-block;
     width: 42px;
     height: 32px;
+    border-radius: 6px;
+    overflow: hidden;
+    border: 1px solid #cfd6e0;
+    box-sizing: border-box;
+}
+.tl-express-toolbar .tl-style .tl-color-picker-wrapper input[type="color"] {
+    width: 120%;
+    height: 120%;
+    margin: -10%;
     padding: 0;
+    border: none;
+    outline: none;
+    box-shadow: none;
+    -webkit-appearance: none;
+    appearance: none;
+    background: transparent;
+    cursor: pointer;
+}
+.tl-express-toolbar .tl-style .tl-color-picker-wrapper input[type="color"]::-webkit-color-swatch-wrapper {
+    padding: 0;
+}
+.tl-express-toolbar .tl-style .tl-color-picker-wrapper input[type="color"]::-webkit-color-swatch {
+    border: none;
+    border-radius: 0;
+}
+.tl-express-toolbar .tl-style .tl-color-picker-wrapper input[type="color"]::-moz-color-swatch {
+    border: none;
+    border-radius: 0;
 }
 
 .tl-express-toolbar .tl-style select[data-proxy-style="stroke-width"] {
