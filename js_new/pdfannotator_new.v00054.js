@@ -20,7 +20,7 @@
         deleteButton: null,
         deleteButtonPage: null,
         drawingStroke: '#ae090f',
-        textColor: '#1f2937',
+        textColor: '#111827',
         annotationColor: '#fff70f',
         strokeWidth: 7,
         textSize: 14,
@@ -2695,7 +2695,7 @@ function fitTextboxAroundContent(annotationData) {
             labelEl.className = 'tl-textbox-label';
             labelEl.setAttribute('data-annotation-id', String(annotation.uuid || ''));
             labelEl.style.position = 'absolute';
-            var _labelColor = annotation.color || '#1f2937';
+            var _labelColor = (annotation.color === '#1f2937' || !annotation.color) ? '#111827' : annotation.color;
             labelEl.style.setProperty('--tl-label-color', _labelColor, 'important');
             labelEl.style.setProperty('color', _labelColor, 'important');
             labelEl.style.setProperty('-webkit-text-fill-color', _labelColor, 'important');
@@ -3229,6 +3229,8 @@ function fitTextboxAroundContent(annotationData) {
         }
         state.bootstrapped = true;
         debugLog('boot', 'bootstrap', {bundle: 'v00054'});
+        var tabbar = document.querySelector('#pdfannotator-tabbar .nav.nav-tabs');
+        if (tabbar) tabbar.classList.add('pdfannotatornavbar');
 
         state.cm = cm;
         state.documentObject = documentObject;

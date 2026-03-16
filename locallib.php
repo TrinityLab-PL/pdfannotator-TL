@@ -79,6 +79,7 @@ function pdfannotator_display_embed($pdfannotator, $cm, $course, $file, $page = 
     $toolbarsettings->use_studentdrawing = $pdfannotator->use_studentdrawing;
     $toolbarsettings->useprint = $pdfannotator->useprint;
     $toolbarsettings->useprintcomments = $pdfannotator->useprintcomments;
+    $toolbarsettings->defaultfullscreen = (isset($pdfannotator->defaultfullscreen) && $pdfannotator->defaultfullscreen) ? 1 : 0;
     // 2. Capabilities.
     $capabilities = new stdClass();
     $capabilities->viewquestions = has_capability('mod/pdfannotator:viewquestions', $context);

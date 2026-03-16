@@ -46,6 +46,7 @@ class index implements \renderable, \templatable {
     private $printurl;
     private $useprivatecomments;
     private $useprotectedcomments;
+    private $defaultfullscreen;
 
     public function __construct($pdfannotator, $capabilities, $file) {
         $this->usestudenttextbox = ($pdfannotator->use_studenttextbox || $capabilities->usetextbox);
@@ -54,6 +55,7 @@ class index implements \renderable, \templatable {
         $this->useprintcomments = ($pdfannotator->useprintcomments || $capabilities->useprintcomments);
         $this->useprivatecomments = $pdfannotator->useprivatecomments;
         $this->useprotectedcomments = $pdfannotator->useprotectedcomments;
+        $this->defaultfullscreen = (isset($pdfannotator->defaultfullscreen) && $pdfannotator->defaultfullscreen) ? 1 : 0;
 
         $this->printurl = moodle_url::make_pluginfile_url(
             $file->get_contextid(), $file->get_component(), $file->get_filearea(),
@@ -73,6 +75,7 @@ class index implements \renderable, \templatable {
         $data->useprintcomments = $this->useprintcomments;
         $data->useprivatecomments = $this->useprivatecomments;
         $data->useprotectedcomments = $this->useprotectedcomments;
+        $data->defaultfullscreen = (int) $this->defaultfullscreen;
         if ($data->useprotectedcomments) {
             $data->protectedhelpicon = $OUTPUT->help_icon('protected_comments', 'mod_pdfannotator');
         }

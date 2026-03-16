@@ -105,7 +105,8 @@ class mod_pdfannotator_renderer extends plugin_renderer_base {
         $taburl = new moodle_url($baseurl, array('action' => $action));
         $tabname = get_string($namekey, 'pdfannotator', $nameargs);
         if ($pdfannotatorname) {
-            strlen($pdfannotatorname) > 20 ? $tabname = substr($pdfannotatorname, 0, 21) . "..." : $tabname = $pdfannotatorname;
+            $plain = strip_tags($pdfannotatorname);
+            strlen($plain) > 20 ? $tabname = substr($plain, 0, 21) . "..." : $tabname = $plain;
         }
         $id = $action;
         $tab = new tabobject($id, $taburl, $tabname);
@@ -130,7 +131,7 @@ class mod_pdfannotator_renderer extends plugin_renderer_base {
             $this->pdfannotator_create_tab($baseurl, 'view', 'document', $pdfannotatorname),
             $this->pdfannotator_create_tab($baseurl, 'statistic', 'statistic'),
         );
-        return $this->tabtree($level1, $selected, $inactive);
+        return $this->output->container_start("", "pdfannotator-tabbar") . $this->tabtree($level1, $selected, $inactive) . $this->output->container_end();
     }
 
 }

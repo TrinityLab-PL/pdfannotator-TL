@@ -5,12 +5,9 @@
  * @return {undefined}
  */
 function adjustPdfannotatorNavbar(Y) {
-    let navbar = document.getElementsByClassName('nav');
-    for (let i = 0; i < navbar.length; i++) {
-        (function (innerI) {
-            tab = navbar[innerI];
-            tab.classList.add('pdfannotatornavbar');
-        })(i);
+    var tabbar = document.querySelector('#pdfannotator-tabbar .nav.nav-tabs');
+    if (tabbar) {
+        tabbar.classList.add('pdfannotatornavbar');
     }
 }
 

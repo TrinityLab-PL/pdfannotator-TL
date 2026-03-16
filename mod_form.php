@@ -114,6 +114,12 @@ class mod_pdfannotator_mod_form extends moodleform_mod {
         $mform->setDefault('useprotectedcomments', $config->use_protected_comments);
         $mform->addHelpButton('useprotectedcomments', 'setting_use_protected_comments', 'pdfannotator');
 
+        $mform->addElement('advcheckbox', 'defaultfullscreen', get_string('setting_defaultfullscreen', 'pdfannotator'),
+            get_string('setting_defaultfullscreen', 'pdfannotator'), null, array(0, 1));
+        $mform->setType('defaultfullscreen', PARAM_BOOL);
+        $mform->setDefault('defaultfullscreen', 0);
+        $mform->addHelpButton('defaultfullscreen', 'setting_defaultfullscreen', 'pdfannotator');
+
         // Add legacy files flag only if used.
         if (isset($this->current->legacyfiles) && $this->current->legacyfiles != RESOURCELIB_LEGACYFILES_NO) {
             $options = array(RESOURCELIB_LEGACYFILES_DONE => get_string('legacyfilesdone', 'pdfannotator'),

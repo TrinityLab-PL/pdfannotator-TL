@@ -1251,6 +1251,23 @@ header, section, footer, aside, nav, main, article, figure {
     margin-bottom: 0 !important;
 }
 
+.path-mod-pdfannotator #pdfannotator-tabbar {
+    flex-shrink: 0;
+}
+.path-mod-pdfannotator #pdfannotator-tabbar .nav.nav-tabs {
+    border-bottom: 0 !important;
+    margin-bottom: 0 !important;
+    display: flex !important;
+    flex-direction: row !important;
+    flex-wrap: nowrap !important;
+}
+.path-mod-pdfannotator #pdfannotator-tabbar .nav.nav-tabs .nav-item {
+    flex: 0 0 auto !important;
+    min-width: min-content !important;
+    white-space: nowrap;
+}
+
+
 .path-mod-pdfannotator #loader {
     position: absolute;
     left: 50%;

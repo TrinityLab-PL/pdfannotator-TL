@@ -645,5 +645,19 @@ function xmldb_pdfannotator_upgrade($oldversion) {
         upgrade_mod_savepoint(true, 2022110200, 'pdfannotator');
     }
 
+    if ($oldversion < 2025090301) {
+
+        // Define field defaultfullscreen to be added to pdfannotator.
+        $table = new xmldb_table('pdfannotator');
+        $field = new xmldb_field('defaultfullscreen', XMLDB_TYPE_INTEGER, '1', null, XMLDB_NOTNULL, null, '0', 'useprotectedcomments');
+
+        if (!$dbman->field_exists($table, $field)) {
+            $dbman->add_field($table, $field);
+        }
+
+        upgrade_mod_savepoint(true, 2025090301, 'pdfannotator');
+    }
+
     return true;
+
 }
