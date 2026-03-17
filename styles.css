@@ -2747,3 +2747,78 @@ body:not(.tl-pdf-fullscreen) #comment-wrapper {
 .path-mod-pdfannotator #comment-wrapper > h4 {
     font-weight: 300;
 }
+
+
+/* TL_COMMENT_PANEL_NEUTRAL_REFACTOR_V54 */
+#comment-wrapper #comment-nav {
+    display: flex !important;
+    align-items: center !important;
+    gap: 8px !important;
+    flex-wrap: wrap !important;
+    min-height: 32px;
+}
+
+#comment-wrapper #comment-nav > * {
+    flex: 0 0 auto;
+}
+
+#comment-wrapper #toggleAllCommentsList,
+#comment-wrapper #searchButton,
+#comment-wrapper .tl-restore-wrap,
+#comment-wrapper .tl-restore-toggle {
+    display: inline-flex !important;
+    align-items: center !important;
+    visibility: visible !important;
+    opacity: 1 !important;
+}
+
+#comment-wrapper .comment-list-item.questions,
+.path-mod-pdfannotator .chat-message.questions:not(.page) {
+    background: #fff !important;
+    color: #111827 !important;
+    border: 0 !important;
+    margin: 0 !important;
+    padding: 0 !important;
+}
+
+#comment-wrapper .tl-question-item {
+    border: 1px solid #e2e8f0;
+    border-radius: 10px;
+    background: #fff;
+    padding: 10px 12px;
+}
+
+#comment-wrapper .tl-question-item .tl-comment-body,
+#comment-wrapper .tl-question-item .tl-comment-body * {
+    color: #111827 !important;
+}
+
+#comment-wrapper .tl-question-item p {
+    margin: 0 0 4px 0;
+}
+
+#comment-wrapper .tl-question-item p:last-child {
+    margin-bottom: 0;
+}
+
+
+/* TL_FULLSCREEN_COMMENT_NAV_VISIBLE_V54 */
+body.tl-pdf-fullscreen #comment-wrapper #comment-nav,
+body.fullscreenWrapper #comment-wrapper #comment-nav {
+    display: flex !important;
+    align-items: center !important;
+    gap: 8px !important;
+}
+
+body.tl-pdf-fullscreen #comment-wrapper #toggleAllCommentsList,
+body.tl-pdf-fullscreen #comment-wrapper #searchButton,
+body.tl-pdf-fullscreen #comment-wrapper .tl-restore-wrap,
+body.tl-pdf-fullscreen #comment-wrapper .tl-restore-toggle,
+body.fullscreenWrapper #comment-wrapper #toggleAllCommentsList,
+body.fullscreenWrapper #comment-wrapper #searchButton,
+body.fullscreenWrapper #comment-wrapper .tl-restore-wrap,
+body.fullscreenWrapper #comment-wrapper .tl-restore-toggle {
+    display: inline-flex !important;
+    visibility: visible !important;
+    opacity: 1 !important;
+}

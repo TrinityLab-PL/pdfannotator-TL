@@ -620,6 +620,7 @@ class pdfannotator_comment {
                 $question->content = get_string('hiddenComment', 'pdfannotator');
             }
             $question->content = pdfannotator_get_relativelink($question->content, $question->id, $context);
+            self::set_username($question);
             $ret[] = $question;
         }
 
@@ -640,6 +641,7 @@ class pdfannotator_comment {
                 continue;
             }
             $question->content = pdfannotator_get_relativelink($question->content, $question->id, $context);
+            self::set_username($question);
             $ret[$question->page][] = $question;
         }
         return $ret;
