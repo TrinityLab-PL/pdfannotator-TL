@@ -1801,7 +1801,7 @@ body.tl-pdf-fullscreen #viewer {
 #tl-toggle-comments {
     margin-top: 0.37em;
     position: relative !important;
-    margin-left: 80px !important;
+    margin-left: 10px !important;
 }
 
 /* Wycentruj PDF w fullscreen */
@@ -2701,4 +2701,46 @@ body:not(.tl-pdf-fullscreen) #viewer {
 #tl-express-toolbar button svg {
     color: #3b3e3e !important;
     fill: #3b3e3e !important;
+}
+
+/* TL_NORMAL_VIEW_LAYOUT_KK */
+body:not(.tl-pdf-fullscreen) #body-wrapper {
+    position: relative !important;
+    display: block !important;
+}
+
+body:not(.tl-pdf-fullscreen) #content-wrapper {
+    width: 100% !important;
+    max-width: 100% !important;
+    flex: none !important;
+    display: flex !important;
+    justify-content: center !important;
+    overflow-y: auto !important;
+    overflow-x: hidden !important;
+    scrollbar-width: none !important;
+    -ms-overflow-style: none !important;
+    padding-right: 14em !important;
+    box-sizing: border-box !important;
+}
+
+body:not(.tl-pdf-fullscreen) #content-wrapper::-webkit-scrollbar {
+    display: none !important;
+}
+
+body:not(.tl-pdf-fullscreen) #content-wrapper #viewer {
+    margin: 0 auto !important;
+}
+
+body:not(.tl-pdf-fullscreen) #comment-wrapper {
+    position: absolute !important;
+    right: 0 !important;
+    top: 0 !important;
+    width: 25em !important;
+    min-width: 0 !important;
+    max-width: none !important;
+    height: 100% !important;
+    overflow-y: auto !important;
+    overflow-x: hidden !important;
+    z-index: 200 !important;
+    flex: none !important;
 }

@@ -85,6 +85,12 @@ $pdfannotator->mainfile = $file->get_filename();
 // Set course name for display.
 $PAGE->set_heading($course->fullname);
 
+// Trinity Lab: Default fullscreen body class
+if (isset($pdfannotator->defaultfullscreen) && $pdfannotator->defaultfullscreen) {
+    $PAGE->add_body_class('pdfannotator-default-fullscreen');
+    $PAGE->add_body_class('tl-pdf-fullscreen');
+    $PAGE->requires->css('/mod/pdfannotator/defaultfullscreen_hide.css?ver=1', true);
+}
 // Trinity Lab: Load enhanced fullscreen module
 // Hotfix: disable missing AMD module that can break page bootstrap.
 $PAGE->requires->js('/mod/pdfannotator/fullscreen_enhanced.js?ver=00055', false);

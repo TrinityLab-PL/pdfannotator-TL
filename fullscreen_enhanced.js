@@ -8,6 +8,25 @@
     'use strict';
     
     console.log('TL Fullscreen Enhanced loaded (simple version)');
+
+    // Auto-start theater mode if defaultfullscreen=1
+    function tryAutoTheater() {
+        var container = document.querySelector('#pdfannotator_index');
+        if (!container || container.getAttribute('data-default-fullscreen') !== '1') return;
+        var btn = document.querySelector('[data-proxy-action="fullscreen"]');
+        if (window.tlToggleTheaterMode && btn) {
+            window.tlToggleTheaterMode();
+            document.body.classList.remove('pdfannotator-default-fullscreen');
+            btn.innerHTML = '<i class="fa fa-compress" style="font-size:22px;"></i>';
+        } else {
+            setTimeout(tryAutoTheater, 200);
+        }
+    }
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', function() { setTimeout(tryAutoTheater, 0); });
+    } else {
+        setTimeout(tryAutoTheater, 0);
+    }
     
     // Czekamy aż DOM będzie gotowy
     if (document.readyState === 'loading') {
@@ -158,19 +177,6 @@
 
         // Funkcja włączania fullscreen
         function enterFullscreen() {
-            var elem = document.documentElement;
-            
-            // HTML5 Fullscreen API
-            if (elem.requestFullscreen) {
-                elem.requestFullscreen();
-            } else if (elem.webkitRequestFullscreen) {
-                elem.webkitRequestFullscreen();
-            } else if (elem.mozRequestFullScreen) {
-                elem.mozRequestFullScreen();
-            } else if (elem.msRequestFullscreen) {
-                elem.msRequestFullscreen();
-            }
-            
             // Ukryj wszystko poza PDF
             document.body.classList.add('tl-pdf-fullscreen');
 
@@ -220,16 +226,6 @@
         
         // Funkcja wyłączania fullscreen
         function exitFullscreen() {
-            if (document.exitFullscreen) {
-                document.exitFullscreen();
-            } else if (document.webkitExitFullscreen) {
-                document.webkitExitFullscreen();
-            } else if (document.mozCancelFullScreen) {
-                document.mozCancelFullScreen();
-            } else if (document.msExitFullscreen) {
-                document.msExitFullscreen();
-            }
-            
             // Przywróć widoczność
             document.body.classList.remove('tl-pdf-fullscreen');
             
@@ -252,38 +248,12 @@
         // Kliknięcie w przycisk fullscreen
         fullscreenBtn.addEventListener('click', function(e) {
             e.preventDefault();
-            if (!isFullscreen) {
-                enterFullscreen();
-            } else {
-                exitFullscreen();
+            if (window.tlToggleTheaterMode) {
+                window.tlToggleTheaterMode();
             }
         });
         
-        // Obsługa ESC
-        document.addEventListener('keydown', function(e) {
-            if (e.key === 'Escape' && isFullscreen) {
-                exitFullscreen();
-            }
-        });
-        
-        // Wykryj wyjście z fullscreen (F11)
-        document.addEventListener('fullscreenchange', handleFullscreenChange);
-        document.addEventListener('webkitfullscreenchange', handleFullscreenChange);
-        document.addEventListener('mozfullscreenchange', handleFullscreenChange);
-        document.addEventListener('msfullscreenchange', handleFullscreenChange);
-        
-        function handleFullscreenChange() {
-            var inFs = !!(document.fullscreenElement || document.webkitFullscreenElement ||
-                document.mozFullScreenElement || document.msFullscreenElement);
-            if (inFs) {
-                isFullscreen = true;
-                setFullscreenButtonState(true);
-            } else {
-                if (isFullscreen) {
-                    exitFullscreen();
-                }
-            }
-        }
+
     }
 })();
 
@@ -308,20 +278,23 @@
             fullscreenBtn.parentNode.insertBefore(btn, fullscreenBtn.nextSibling);
         }
         
+        // Stan początkowy przycisku - kk domyślnie zamknięta
+        if (wrapper.classList.contains('tl-comments-hidden')) {
+            btn.innerHTML = '<i class="fa fa-chevron-left"></i> Open comments';
+        } else {
+            btn.innerHTML = '<i class="fa fa-chevron-right"></i> Close comments';
+        }
+
         btn.onclick = function() {
             var commentWrapper = document.getElementById('comment-wrapper');
-            if (wrapper.style.display === 'none') {
-                wrapper.style.display = 'block';
+            if (commentWrapper.classList.contains('tl-comments-hidden')) {
+                commentWrapper.classList.remove('tl-comments-hidden');
+                commentWrapper.style.display = 'block';
                 btn.innerHTML = '<i class="fa fa-chevron-right"></i> Close comments';
-                if (commentWrapper) {
-                    commentWrapper.classList.remove('tl-comments-hidden');
-                }
             } else {
-                wrapper.style.display = 'none';
+                commentWrapper.classList.add('tl-comments-hidden');
+                commentWrapper.style.display = 'none';
                 btn.innerHTML = '<i class="fa fa-chevron-left"></i> Open comments';
-                if (commentWrapper) {
-                    commentWrapper.classList.add('tl-comments-hidden');
-                }
             }
         };
     }, 500);

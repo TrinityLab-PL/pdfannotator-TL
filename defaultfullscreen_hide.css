@@ -1,17 +1,9 @@
-/**
- * Hide Moodle chrome from first paint when PDF Annotator opens in default fullscreen.
- * Prevents the brief flash of normal view before JS triggers fullscreen.
- */
 body.pdfannotator-default-fullscreen #page-header,
 body.pdfannotator-default-fullscreen #page-footer,
 body.pdfannotator-default-fullscreen .breadcrumb,
 body.pdfannotator-default-fullscreen .navbar,
 body.pdfannotator-default-fullscreen #block-region-side-pre,
 body.pdfannotator-default-fullscreen #block-region-side-post,
-body.pdfannotator-default-fullscreen #nav-drawer,
-body.pdfannotator-default-fullscreen nav:not(#pdftoolbar) {
+body.pdfannotator-default-fullscreen #nav-drawer {
     display: none !important;
-}
-body.pdfannotator-default-fullscreen #page {
-    padding: 0;
 }

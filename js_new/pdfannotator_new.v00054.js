@@ -420,8 +420,13 @@
         if (!wrapper) {
             return;
         }
-        wrapper.style.display = '';
+        wrapper.classList.remove('tl-comments-hidden');
         wrapper.classList.remove('hidden');
+        wrapper.style.display = 'block';
+        var toggleIcon = document.querySelector('[data-proxy-action="toggle-comments"] i');
+        if (toggleIcon) toggleIcon.className = 'fa fa-comments';
+        var btn = document.getElementById('tl-toggle-comments');
+        if (btn) btn.innerHTML = '<i class="fa fa-chevron-right"></i> Close comments';
     }
 
     var theaterState = {
@@ -453,6 +458,8 @@
             document.body.classList.add('tl-pdf-fullscreen');
             setTimeout(logBug8Fullscreen, 1500);
             theaterState.enabled = true;
+            var btnOn = document.querySelector('[data-proxy-action="fullscreen"]');
+            if (btnOn) { btnOn.innerHTML = '<i class="fa fa-compress" style="font-size:22px;"></i>'; }
             return;
         }
         theaterState.hiddenElements.forEach(function (entry) {
@@ -461,8 +468,17 @@
         theaterState.hiddenElements = [];
         document.body.classList.remove('tl-pdf-fullscreen');
         theaterState.enabled = false;
+        var btnOff = document.querySelector('[data-proxy-action="fullscreen"]');
+        if (btnOff) { btnOff.innerHTML = '<i class="fa fa-expand" style="font-size:22px;"></i>'; }
     }
+    window.tlToggleTheaterMode = toggleTheaterMode;
 
+
+    document.addEventListener('keydown', function(e) {
+        if (e.key !== 'Escape') return;
+        if (isBrowserFullscreen()) return;
+        if (theaterState.enabled) { toggleTheaterMode(); }
+    });
 
     function isBrowserFullscreen() {
         return !!(document.fullscreenElement || document.webkitFullscreenElement ||
@@ -580,7 +596,7 @@
             '<span class="tl-page-counter" data-proxy-action="page-counter">1 / 1</span>',
             '</div>',
             '<div class="tl-group tl-misc">',
-            '<button type="button" data-proxy-action="toggle-comments" title="Comments"><i class="fa fa-comments"></i></button>',
+            '<button type="button" data-proxy-action="toggle-comments" title="Comments"><i class="fa fa-comments-o"></i></button>',
             '<button type="button" data-proxy-action="fullscreen" title="Full screen (ESC to exit)"><i class="fa fa-expand"></i></button>',
             '</div>'
         ].join('');
@@ -683,7 +699,7 @@
             scrollToPage(Math.min(state.pdf ? state.pdf.numPages : 1, getCurrentPage() + 1));
         });
         shell.querySelector('[data-proxy-action="fullscreen"]').addEventListener('click', function () {
-            toggleBrowserFullscreenAndTheater();
+            toggleTheaterMode();
         });
         var colorInput = shell.querySelector('[data-proxy-style="color"]');
         var strokeInput = shell.querySelector('[data-proxy-style="stroke-width"]');
@@ -725,7 +741,16 @@
             if (!wrapper) {
                 return;
             }
-            wrapper.style.display = (wrapper.style.display === 'none') ? '' : 'none';
+            var toggleIcon = shell.querySelector('[data-proxy-action="toggle-comments"] i');
+            if (wrapper.classList.contains('tl-comments-hidden')) {
+                wrapper.classList.remove('tl-comments-hidden');
+                wrapper.style.display = 'block';
+                if (toggleIcon) toggleIcon.className = 'fa fa-comments';
+            } else {
+                wrapper.classList.add('tl-comments-hidden');
+                wrapper.style.display = 'none';
+                if (toggleIcon) toggleIcon.className = 'fa fa-comments-o';
+            }
         });
     }
 
@@ -3291,11 +3316,7 @@ function fitTextboxAroundContent(annotationData) {
         initKeyboardShortcuts();
         setTool('cursor');
         bindVisibilityRecovery();
-        document.addEventListener('fullscreenchange', function () {
-            if (!isBrowserFullscreen() && theaterState.enabled) {
-                toggleTheaterMode();
-            }
-        });
+
 
         initPdf().then(function () {
             renderDocument();
