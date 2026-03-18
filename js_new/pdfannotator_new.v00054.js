@@ -1834,6 +1834,7 @@
 
         if (state.showAllComments) {
             ajax('getQuestions', { page_Number: -1 }).then(function (data) {
+                if (state.commentTarget) return;
                 var grouped = (data && data.questions) ? data.questions : {};
                 var flat = [];
                 Object.keys(grouped).forEach(function (pg) {
@@ -1850,6 +1851,7 @@
         var p = document.getElementById('currentPage');
         var pg = (p && p.value) ? p.value : 1;
         ajax('getQuestions', { page_Number: pg }).then(function (questions) {
+            if (state.commentTarget) return;
             var arr = Array.isArray(questions) ? questions : [];
             renderQuestionRows(list, arr);
         });
