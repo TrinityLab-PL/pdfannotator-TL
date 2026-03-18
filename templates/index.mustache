@@ -118,25 +118,9 @@
         <div class="span4 col-lg-4 tl-comments-hidden" id="comment-wrapper">
                 <h4>{{# str }} questionstitle, pdfannotator {{/ str }}</h4>
                 <div id="comment-nav">
-                    <button id="allQuestions" class="btn-link" title="{{#str}}allquestionsimgtitle, pdfannotator{{/str}}">
-                        <i title="{{#str}}allquestionsimgtitle, pdfannotator{{/str}}" class="icon fa fa-book fa-fw"></i>
+                    <button id="toggleAllCommentsList" class="btn-link" title="Show all comments">
+                        <i class="icon fa fa-comment-o fa-fw"></i>
                     </button>
-                    <button id="questionsOnThisPage" class="btn-link" title="{{#str}}questionsimgtitle, pdfannotator{{/str}}">
-                        <i title="{{#str}}questionsimgtitle, pdfannotator{{/str}}" class="icon fa fa-comments fa-fw"></i>
-                    </button>
-                    <span class="comment-visibility">
-                        <span class="spacer" visiblewidth="1"></span>
-                        <button id="showAllComments" class="comment-visibility-button comment-all" data-active="true">
-                            {{# pix }}comments_all,pdfannotator, {{# str }} comments_text_all, pdfannotator {{/ str }} {{/ pix}}
-                        </button>
-                        <button id="showPublicComments" class="comment-visibility-button" data-active="false">
-                            {{# pix }}comments_public,pdfannotator, {{# str }} comments_text_public, pdfannotator {{/ str }} {{/ pix}}
-                        </button>
-                        <button id="showPrivateComments" class="comment-visibility-button  comment-private" data-active="false">
-                            {{# pix }}comments_private,pdfannotator, {{# str }} comments_text_private, pdfannotator {{/ str }} {{/ pix}}
-                        </button>
-                        <span class="spacer" visiblewidth="1"></span>
-                    </span>
                     <button id="searchButton" class="btn-link" title="{{# str }} search, pdfannotator {{/ str }}" alt="{{# str }} search, pdfannotator {{/ str }}">
                         <i class="icon fa fa-search fa-fw" title="{{# str }} search, pdfannotator {{/ str }}" alt="{{# str }} search, pdfannotator {{/ str }}"></i>
                     </button>

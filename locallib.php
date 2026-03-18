@@ -68,7 +68,7 @@ function pdfannotator_display_embed($pdfannotator, $cm, $course, $file, $page = 
     $PAGE->requires->js('/mod/pdfannotator/lib/konva/konva_loader.js?ver=00001', false);
     $PAGE->requires->js('/mod/pdfannotator/shared/textclipper.js', false);
     $PAGE->requires->js('/mod/pdfannotator/lib/lazy-brush/lazy-brush.umd.cjs?ver=00001', false);
-    $PAGE->requires->js('/mod/pdfannotator/js_new/pdfannotator_new.v00054.js?ver=00061', false);
+    $PAGE->requires->js('/mod/pdfannotator/js_new/pdfannotator_new.v00054.js?ver=00058', false);
     $PAGE->requires->js('/mod/pdfannotator/shared/locallib.js?ver=00008', false);
 
     // Pass parameters from PHP to JavaScript.

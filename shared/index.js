@@ -1449,39 +1449,18 @@ function startIndex(
 
                 render();
 
-                //initialize button allQuestions
+                //initialize button toggleAllCommentsList
                 (function () {
-                    document.querySelector('#allQuestions').addEventListener('click', function () {
-                        UI.renderAllQuestions(documentId);
-                    });
-                })();
-
-                //initialize button questionsOnThisPage
-                (function () {
-                    document.querySelector('#questionsOnThisPage').addEventListener('click', function () {
-                        var pageNumber = document.getElementById('currentPage').value;
-                        UI.renderQuestions(documentId, pageNumber, 1);
-                    });
-                })();
-
-                /**
-                 * Initialize buttons comment-visibility
-                 * @returns {undefined}
-                 */
-                (function () {
-                    const visibilityButtons = document.querySelectorAll('.comment-visibility-button');
-                    const clearActiveAttribute = (nodes) => {
-                        nodes.forEach(btn => {btn.setAttribute('data-active', false)});
-                    };
-                    visibilityButtons.forEach(btn => {
-                        btn.addEventListener('click', function () {
-                            if(btn.getAttribute('data-active') === 'false'){
-                                clearActiveAttribute(visibilityButtons);
-                                btn.setAttribute('data-active', true);
-                                const pageNumber = document.getElementById('currentPage').value;
-                                UI.renderQuestions(documentId, pageNumber, 1);
-                            }
-                        });
+                    var btn = document.querySelector('#toggleAllCommentsList');
+                    if (!btn) return;
+                    var icon = btn.querySelector('i');
+                    var showAll = false;
+                    btn.addEventListener('click', function () {
+                        showAll = !showAll;
+                        if (icon) icon.className = showAll ? 'icon fa fa-comment fa-fw' : 'icon fa fa-comment-o fa-fw';
+                        btn.title = showAll ? 'Hide all comments' : 'Show all comments';
+                        var p = document.getElementById('currentPage');
+                        if (showAll) UI.renderAllCommentsFlat(documentId); else UI.renderQuestions(documentId, p ? p.value : 1, 1);
                     });
                 })();
 
@@ -10241,6 +10220,7 @@ var _logD={sessionId:'7d36cc',location:'createEditOverlay',message:'drawing FF',
                                 Object.defineProperty(exports, '__esModule', { value: true });
                                 exports.renderQuestions = renderQuestions;
                                 exports.renderAllQuestions = renderAllQuestions;
+                                exports.renderAllCommentsFlat = renderAllCommentsFlat;
                                 var _event = __webpack_require__(4);
                                 var _shortText = __webpack_require__(39);
                                 var _PDFJSAnnotate = __webpack_require__(1);
@@ -10545,6 +10525,59 @@ var _logD={sessionId:'7d36cc',location:'createEditOverlay',message:'drawing FF',
                                                 });
                                             }
                                         );
+                                }
+
+                                function renderAllCommentsFlat(documentId) {
+                                    _PDFJSAnnotate2.default.getStoreAdapter().getQuestions(documentId).then(
+                                        function (data) {
+                                            var container = document.querySelector(".comment-list-container");
+                                            var title = document.querySelector("#comment-wrapper > h4");
+                                            if (title) title.innerHTML = M.util.get_string("allquestionstitle", "pdfannotator") + " " + (data.pdfannotatorname || "");
+                                            if (!container) return;
+                                            container.innerHTML = "";
+                                            var form = document.querySelector(".comment-list-form");
+                                            if (form && form.style.display !== "none") form.style.display = "none";
+                                            var qs = data.questions || {};
+                                            var flat = [];
+                                            for (var pg in qs) { (qs[pg] || []).forEach(function(q){ q.page = pg; flat.push(q); }); }
+                                            if (flat.length < 1) {
+                                                container.innerHTML = M.util.get_string("noquestions_view", "pdfannotator");
+                                                return;
+                                            }
+                                            flat.forEach(function(question) {
+                                                var qw = document.createElement("div");
+                                                qw.className = "chat-message comment-list-item questions" + (question.visibility === "private" || question.visibility === "protected" ? " questions-private" : "");
+                                                var qv = document.createElement("img");
+                                                if (question.visibility === "private" || question.visibility === "protected") {
+                                                    qv.src = M.util.image_url("comments_private_indicator", "pdfannotator");
+                                                    qv.alt = qv.title = M.util.get_string("comments_icon_private", "pdfannotator");
+                                                    qv.className = "question-private-icon";
+                                                } else {
+                                                    qv.src = M.util.image_url("comments_public_indicator", "pdfannotator");
+                                                    qv.alt = qv.title = M.util.get_string("comments_icon_public", "pdfannotator");
+                                                    qv.className = "question-public-icon";
+                                                }
+                                                var qt = document.createElement("span"); qt.className = "more"; qt.innerHTML = question.content;
+                                                var qa = document.createElement("span"); qa.innerHTML = question.answercount; qa.className = "questionanswercount";
+                                                var qp = document.createElement("i"); qp.className = "icon fa fa-comment fa-fw questionanswercount"; qp.title = M.util.get_string("answers", "pdfannotator");
+                                                var iw = document.createElement("div"); iw.className = "icon-wrapper";
+                                                if (question.solved != 0) { var sp = document.createElement("i"); sp.className = "icon fa fa-lock fa-fw solvedicon"; sp.title = M.util.get_string("questionSolved", "pdfannotator"); iw.appendChild(sp); }
+                                                iw.appendChild(qp); iw.appendChild(qa);
+                                                qw.style.position = "relative"; qw.appendChild(qv); qw.appendChild(qt); qw.appendChild(iw);
+                                                container.appendChild(qw);
+                                                (function(qo, qd) { qd.onclick = function() {
+                                                    if (qo.page !== $("#currentPage").val()) $("#content-wrapper").scrollTop(document.getElementById("pageContainer" + qo.page).offsetTop);
+                                                    var t = $("[data-pdf-annotate-id=" + qo.annotationid + "]")[0];
+                                                    if (t) _event.fireEvent("annotation:click", t);
+                                                    var td = $("[data-target-id=" + qo.annotationid + "]")[0];
+                                                    if (td) { var po = document.getElementById("pageContainer" + qo.page); if (po) { var cw = $("#content-wrapper"); cw.scrollTop(po.offsetTop + td.offsetTop - 100); cw.scrollLeft(td.offsetLeft - cw.width() + 100); } }
+                                                    renderQuestions(documentId, qo.page, 1);
+                                                }; })(question, qw);
+                                            });
+                                            _shortText.shortenTextDynamic(null, ".more", 4);
+                                        },
+                                        function(err) { notification.addNotification({ message: M.util.get_string("error:getAllQuestions", "pdfannotator"), type: "error" }); }
+                                    );
                                 }
                             },
                             /* 39 */ /*OWN Module! To shorten a specific text*/
