@@ -1889,9 +1889,9 @@ body:not(.tl-pdf-fullscreen) #body-wrapper:has(#comment-wrapper.tl-comments-hidd
 body.tl-pdf-fullscreen #comment-wrapper {
     position: fixed !important;
     right: 0.5em !important;
-    top: 60px !important;
+    top: 80px !important;
     width: 28em !important;
-    height: calc(100vh - 60px) !important;
+    height: calc(100vh - 80px) !important;
     overflow-y: auto !important;
     overflow-x: hidden !important;
     background: white !important;

@@ -18,5 +18,6 @@
         "titleBar.inactiveBackground": "#d6ac0499",
         "titleBar.inactiveForeground": "#15202b99"
     },
-    "peacock.remoteColor": "#d6ac04"
+    "peacock.remoteColor": "#d6ac04",
+    "ndjson.port": 9877
 }
