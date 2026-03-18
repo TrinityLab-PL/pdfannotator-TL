@@ -1960,7 +1960,7 @@
         }
         state.commentNavMuting = true;
         if (!state.deletedAnnotations.length) {
-            list.innerHTML = '<div class="tl-restore-empty">Brak usuniętych adnotacji.</div>';
+            list.innerHTML = '<div class="tl-restore-empty">No deleted annotations to restore.</div>';
             setTimeout(function () {
                 state.commentNavMuting = false;
             }, 0);
@@ -1970,7 +1970,7 @@
             var type = escapeHtml((entry.annotation && entry.annotation.type) || 'annotation');
             var page = Number(entry.pageNumber) || 1;
             return '<button type="button" class="tl-restore-item" data-restore-index="' + String(index) + '">'
-                + 'Przywróć: ' + type + ' (str. ' + String(page) + ')</button>';
+                + 'Restore: ' + type + ' (Page ' + String(page) + ')</button>';
         }).join('');
         list.querySelectorAll('.tl-restore-item').forEach(function (button) {
             button.addEventListener('click', function () {
