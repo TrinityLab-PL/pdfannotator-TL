@@ -714,19 +714,6 @@ class pdfannotator_comment {
 
         $ret = [];
         foreach ($records as $record) {
-            if ($record->isquestion) {
-                $vis = $record->visibility;
-                $uid = $record->userid;
-            } else {
-                if ($record->qvisibility === null) { continue; }
-                if ($record->qisdeleted == 1) { continue; }
-                if ($record->qishidden == 1 && !$displayhidden) { continue; }
-                $vis = $record->qvisibility;
-                $uid = $record->quserid;
-            }
-            if ($vis === 'private' && $USER->id != $uid) { continue; }
-            if ($vis === 'protected' && $USER->id != $uid
-                && !has_capability('mod/pdfannotator:viewprotectedcomments', $context)) { continue; }
             if ($record->ishidden == 1 && !$displayhidden) { continue; }
 
             // Compute bbox for reading-order sort: natural reading = top-to-bottom, left-to-right.
