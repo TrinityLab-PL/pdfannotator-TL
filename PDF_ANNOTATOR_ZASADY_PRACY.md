@@ -26,6 +26,7 @@
 - Wszystkie zmiany kodu wynikające z tego promptu muszą być zawarte w tym jednym wywołaniu (np. łańcuch poleceń w jednym `--cmd`, lub jeden skrypt w heredoc).
 - Niedopuszczalne jest wielokrotne włączanie i wyłączanie trybu konserwacji w ramach jednego przejścia — użytkownicy nie mogą wielokrotnie widzieć niedostępnego serwera.
 - Po wykonaniu tego jednego bashu asystent może podać użytkownikowi **kroki smoke testów** (instrukcje do ręcznego sprawdzenia); nie jest to kolejna zmiana kodu ani kolejne wywołanie skryptu.
+- Od momentu, gdy użytkownik nakazuje „wdrożenie”, asystent wykonuje pracę w całości samodzielnie: nie pokazuje okienek do zatwierdzania i nie wymaga kliknięcia „Run” ani „akceptacji” po stronie użytkownika. SMOKE na końcu ma mieć charakter informacyjny (bez przerywania procesu w trakcie wdrożenia).
 
 
 - **Edycja plików w `mod/pdfannotator/` (w tym chronionego pliku): wyłącznie przez skrypt.**  
@@ -113,7 +114,7 @@
   PHP: `php -l mod/pdfannotator/view.php && php -l mod/pdfannotator/lib.php`.  
   JS: `node --check /var/www/html/moodle/mod/pdfannotator/shared/index.js` (jeśli brak node: SYNTAX: SKIPPED).
 - **REGRES (ręcznie):** typy adnotacji (point, area, textbox, text), różne zoomy (np. 100%, 133%, 150%, 200%), tryb normalny i fullscreen; tworzenie, przeciąganie, zapis, odświeżenie — zgodność pozycji, brak niepożądanego przesunięcia.
-- **SMOKE (ręcznie):** otwarcie PDF, ewentualnie czyszczenie cache przeglądarki i twarde odświeżenie, potem zwykłe F5 — brak błędów blokujących flow.
+- **SMOKE (ręcznie):** otwarcie PDF, ewentualnie czyszczenie cache przeglądarki i twarde odświeżenie, potem zwykłe F5 — brak błędów blokujących flow. Po wdrożeniu asystent nie prosi o „Run” ani akceptację; jeśli potrzebna jest odpowiedź zwrotna, ma to być wyłącznie krótkie „działa/nie działa”.
 - Jeśli którykolwiek test ma FAIL — nie modyfikować kodu; najpierw naprawa.
 
 ---
