@@ -1772,7 +1772,8 @@
             return {
                 content: plain,
                 visibility: item.visibility || 'public',
-                isquestion: item.isquestion ? '1' : '0'
+                posttype: item.posttype || (item.isquestion ? 'question' : 'comment'),
+                parentid: item.parentid || 0
             };
         }).filter(function (entry) {
             return !!entry.content;
@@ -2234,7 +2235,8 @@
                         annotationId: String(created.uuid),
                         content: comment.content,
                         visibility: comment.visibility || 'public',
-                        isquestion: comment.isquestion || '0',
+                        posttype: comment.posttype || 'comment',
+                        parentid: comment.parentid || 0,
                         pdfannotator_addcomment_editoritemid: '0'
                     }).catch(function () { return {}; });
                 });
@@ -2276,76 +2278,111 @@
 
     function ensureCommentComposer() {
         var panel = document.querySelector('#comment-wrapper .pdfannotator-comment-list');
-        if (!panel) {
-            return null;
-        }
+        if (!panel) return null;
         var composer = panel.querySelector('.tl-comment-composer');
-        if (composer) {
-            return composer;
-        }
+        if (composer) return composer;
 
         composer = document.createElement('div');
         composer.className = 'tl-comment-composer';
         composer.innerHTML = [
-            '<textarea class="tl-comment-input" rows="3" placeholder="Select an annotation and type a comment..."></textarea>',
-            '<div class="tl-comment-composer-actions">',
+            '<div class="tl-composer-label"></div>',
+            '<div class="tl-composer-actions">',
             '<select class="tl-comment-visibility" title="Comment visibility">',
             '<option value="public">Public</option>',
             '<option value="anonymous">Anonymous</option>',
             '<option value="private">Private</option>',
             '<option value="protected">Protected</option>',
             '</select>',
-            '<button type="button" class="tl-comment-submit">Add comment</button>',
+            '<button type="button" class="tl-composer-btn tl-composer-btn-comment">Add comment</button>',
+            '<button type="button" class="tl-composer-btn tl-composer-btn-question">Ask question</button>',
             '</div>',
-            '<div class="tl-comment-composer-hint"></div>'
+            '<div class="tl-composer-input-wrap" style="display:none">',
+            '<textarea class="tl-comment-input" rows="3" placeholder=""></textarea>',
+            '<button type="button" class="tl-composer-btn tl-composer-btn-submit">Send</button>',
+            '</div>'
         ].join('');
 
         panel.appendChild(composer);
         ensureRestoreControls();
 
-        var input = composer.querySelector('.tl-comment-input');
-        var visibility = composer.querySelector('.tl-comment-visibility');
-        var submit = composer.querySelector('.tl-comment-submit');
-        var hint = composer.querySelector('.tl-comment-composer-hint');
+        var label       = composer.querySelector('.tl-composer-label');
+        var visibility  = composer.querySelector('.tl-comment-visibility');
+        var btnComment  = composer.querySelector('.tl-composer-btn-comment');
+        var btnQuestion = composer.querySelector('.tl-composer-btn-question');
+        var inputWrap   = composer.querySelector('.tl-composer-input-wrap');
+        var input       = composer.querySelector('.tl-comment-input');
+        var btnSubmit   = composer.querySelector('.tl-composer-btn-submit');
+
+        var currentPosttype = null;
+        var currentAnnotationId = null;
 
         function syncComposerState() {
             var enabled = !!(state.commentTarget && state.commentTarget.annotationId);
-            input.disabled = !enabled;
-            visibility.disabled = !enabled;
-            submit.disabled = !enabled;
-            hint.textContent = enabled ? ('Annotation #' + state.commentTarget.annotationId) : 'First select an annotation, then add a comment.';
+            if (!enabled) {
+                label.textContent = '';
+                inputWrap.style.display = 'none';
+                btnComment.disabled = true;
+                btnQuestion.disabled = true;
+                visibility.disabled = true;
+                currentPosttype = null;
+                currentAnnotationId = null;
+                input.value = '';
+                return;
+            }
+            var newId = state.commentTarget.annotationId;
+            if (newId !== currentAnnotationId) {
+                currentPosttype = null;
+                input.value = '';
+                inputWrap.style.display = 'none';
+                currentAnnotationId = newId;
+            }
+            label.textContent = 'Annotation #' + newId;
+            btnComment.disabled = false;
+            btnQuestion.disabled = false;
+            visibility.disabled = false;
         }
 
-        submit.addEventListener('click', function () {
-            if (!state.commentTarget || !state.commentTarget.annotationId) {
-                syncComposerState();
-                return;
-            }
+        function choosePosttype(type) {
+            currentPosttype = type;
+            inputWrap.style.display = 'block';
+            input.placeholder = (type === 'question') ? '...and type a question' : '...and type a comment';
+            input.focus();
+        }
+
+        btnComment.addEventListener('click', function () {
+            if (!state.commentTarget || !state.commentTarget.annotationId) return;
+            choosePosttype('comment');
+        });
+
+        btnQuestion.addEventListener('click', function () {
+            if (!state.commentTarget || !state.commentTarget.annotationId) return;
+            choosePosttype('question');
+        });
+
+        btnSubmit.addEventListener('click', function () {
+            if (!state.commentTarget || !state.commentTarget.annotationId || !currentPosttype) return;
             var content = (input.value || '').trim();
-            if (!content) {
-                input.focus();
-                return;
-            }
-            submit.disabled = true;
+            if (!content) { input.focus(); return; }
+            btnSubmit.disabled = true;
             ajax('addComment', {
                 annotationId: String(state.commentTarget.annotationId),
                 content: content,
                 visibility: visibility.value || 'public',
-                isquestion: '0',
+                posttype: currentPosttype,
+                parentid: 0,
                 pdfannotator_addcomment_editoritemid: '0'
             }).then(function () {
                 var submittedContent = content;
                 input.value = '';
+                currentPosttype = null;
+                inputWrap.style.display = 'none';
                 if (state.commentTarget && state.commentTarget.annotationId) {
-                    var targetId = state.commentTarget.annotationId;
+                    var targetId   = state.commentTarget.annotationId;
                     var targetType = state.commentTarget.annotationType;
-                    // Optimistic immediate feedback: show freshly added comment instantly.
                     var list = document.querySelector('#comment-wrapper .comment-list-container');
                     if (list) {
                         var empty = list.querySelector('.tl-comment-empty');
-                        if (empty) {
-                            empty.remove();
-                        }
+                        if (empty) empty.remove();
                         var preview = document.createElement('article');
                         preview.className = 'tl-comment-item tl-comment-item--pending';
                         preview.innerHTML = '<div class="tl-comment-meta"><strong>You</strong><span>Now</span></div>'
@@ -2366,6 +2403,7 @@
             }).catch(function (error) {
                 console.error('Add comment failed', error);
             }).finally(function () {
+                btnSubmit.disabled = false;
                 syncComposerState();
             });
         });
@@ -2397,38 +2435,150 @@
 
     function renderCommentsPanel(commentsPayload) {
         var list = document.querySelector('#comment-wrapper .comment-list-container');
-        if (!list) {
-            return;
-        }
+        if (!list) return;
         var comments = (commentsPayload && Array.isArray(commentsPayload.comments)) ? commentsPayload.comments : [];
         if (!comments.length) {
-            if (list.querySelector('.tl-comment-item--pending')) {
-                return;
-            }
+            if (list.querySelector('.tl-comment-item--pending')) return;
             list.innerHTML = '<div class="tl-comment-empty">No comments for this annotation.</div>';
             return;
         }
-        list.innerHTML = comments.map(function (item) {
-            var user = escapeHtml(item.username || 'Użytkownik');
-            var formattedTime = formatPolishTimestamp(item.timecreatedts, item.timecreated || '');
-            var time = escapeHtml(formattedTime || item.timecreated || '');
-            var commentId = escapeHtml(item.uuid || item.id || '');
-            var body = item.displaycontent || escapeHtml(item.content || item.rawAnsweredquestion || item.answer || '');
-            return '<article class="tl-comment-item">'
-                + '<div class="tl-comment-meta"><strong>' + user + '</strong><span class="tl-comment-meta-right"><span>' + time + '</span>'
-                + '<button type="button" class="tl-comment-delete" data-comment-id="' + commentId + '" title="Delete comment"><i class="fa fa-trash"></i></button>'
+
+        var roots = [];
+        var answersByParent = {};
+        comments.forEach(function (item) {
+            var pt = item.posttype || (item.isquestion ? 'question' : 'comment');
+            item._posttype = pt;
+            if (pt === 'answer' && item.parentid) {
+                var pid = String(item.parentid);
+                if (!answersByParent[pid]) answersByParent[pid] = [];
+                answersByParent[pid].push(item);
+            } else {
+                roots.push(item);
+            }
+        });
+
+        list.innerHTML = '';
+
+        roots.forEach(function (root) {
+            var rootDbId = String(root.uuid || root.id || '');
+            var rootCommentId = String(root.id || root.uuid || '');
+            var pt = root._posttype;
+            var badge = pt === 'question' ? 'Q' : 'C';
+            var user = escapeHtml(root.username || 'Użytkownik');
+            var time = escapeHtml(formatPolishTimestamp(root.timecreatedts, root.timecreated || '') || root.timecreated || '');
+            var body = root.displaycontent || escapeHtml(root.content || '');
+
+            var article = document.createElement('article');
+            article.className = 'tl-comment-item tl-comment-root';
+            article.setAttribute('data-comment-id', rootDbId);
+            article.innerHTML = '<div class="tl-comment-meta">'
+                + '<span class="tl-comment-badge tl-badge-' + pt + '">' + badge + '</span>'
+                + '<strong>' + user + '</strong>'
+                + '<span class="tl-comment-meta-right"><span>' + time + '</span>'
+                + '<button type="button" class="tl-comment-delete" data-comment-id="' + escapeHtml(rootDbId) + '" title="Delete"><i class="fa fa-trash"></i></button>'
                 + '</span></div>'
-                + '<div class="tl-comment-body">' + body + '</div>'
-                + '</article>';
-        }).join('');
+                + '<div class="tl-comment-body-wrap"><div class="tl-comment-body tl-comment-body-collapsible">' + body + '</div></div>'
+                + '<div class="tl-comment-root-actions">'
+                + '<button type="button" class="tl-reply-btn" data-parent-id="' + escapeHtml(rootCommentId) + '">Reply</button>'
+                + '</div>'
+                + '<div class="tl-reply-form" style="display:none">'
+                + '<textarea class="tl-reply-input" rows="2" placeholder="...and type a reply"></textarea>'
+                + '<button type="button" class="tl-reply-submit">Send</button>'
+                + '</div>';
+            list.appendChild(article);
+
+            var replyBtn    = article.querySelector('.tl-reply-btn');
+            var replyForm   = article.querySelector('.tl-reply-form');
+            var replyInput  = article.querySelector('.tl-reply-input');
+            var replySubmit = article.querySelector('.tl-reply-submit');
+
+            replyBtn.addEventListener('click', function () {
+                var shown = replyForm.style.display !== 'none';
+                replyForm.style.display = shown ? 'none' : 'block';
+                if (!shown) replyInput.focus();
+            });
+
+            replySubmit.addEventListener('click', function () {
+                var content = (replyInput.value || '').trim();
+                if (!content) { replyInput.focus(); return; }
+                if (!state.commentTarget || !state.commentTarget.annotationId) return;
+                replySubmit.disabled = true;
+                var visEl = document.querySelector('#comment-wrapper .tl-comment-visibility');
+                ajax('addComment', {
+                    annotationId: String(state.commentTarget.annotationId),
+                    content: content,
+                    visibility: visEl ? visEl.value : 'public',
+                    posttype: 'answer',
+                    parentid: rootCommentId,
+                    pdfannotator_addcomment_editoritemid: '0'
+                }).then(function () {
+                    replyInput.value = '';
+                    replyForm.style.display = 'none';
+                    if (state.commentTarget && state.commentTarget.annotationId) {
+                        loadCommentsForAnnotation(state.commentTarget.annotationId, state.commentTarget.annotationType);
+                    }
+                }).catch(function (error) {
+                    console.error('Reply failed', error);
+                }).finally(function () {
+                    replySubmit.disabled = false;
+                });
+            });
+
+            var answers = answersByParent[rootCommentId] || [];
+            answers.forEach(function (ans) {
+                var ansDbId  = String(ans.uuid || ans.id || '');
+                var ansUser  = escapeHtml(ans.username || 'Użytkownik');
+                var ansTime  = escapeHtml(formatPolishTimestamp(ans.timecreatedts, ans.timecreated || '') || ans.timecreated || '');
+                var ansBody  = ans.displaycontent || escapeHtml(ans.content || '');
+                // TODO: replace rootCommentId with annotation ordinal #N when API provides it
+                var parentLink = (pt === 'question' ? 'Reply to' : 'Comment to') + ' #' + escapeHtml(rootCommentId);
+
+                var ansArticle = document.createElement('article');
+                ansArticle.className = 'tl-comment-item tl-comment-answer';
+                ansArticle.setAttribute('data-comment-id', ansDbId);
+                ansArticle.innerHTML = '<div class="tl-comment-meta">'
+                    + '<span class="tl-comment-badge tl-badge-answer">A</span>'
+                    + '<strong>' + ansUser + '</strong>'
+                    + '<span class="tl-comment-meta-right"><span>' + ansTime + '</span>'
+                    + '<button type="button" class="tl-comment-delete" data-comment-id="' + escapeHtml(ansDbId) + '" title="Delete"><i class="fa fa-trash"></i></button>'
+                    + '</span></div>'
+                    + '<div class="tl-comment-parent-link">' + parentLink + '</div>'
+                    + '<div class="tl-comment-body-wrap"><div class="tl-comment-body tl-comment-body-collapsible">' + ansBody + '</div></div>';
+                list.appendChild(ansArticle);
+            });
+        });
+
+        list.querySelectorAll('.tl-comment-body-collapsible').forEach(function (bodyEl) {
+            var lh = parseFloat(window.getComputedStyle(bodyEl).lineHeight) || 20;
+            var maxH = lh * 3;
+            if (bodyEl.scrollHeight > maxH + 4) {
+                bodyEl.style.maxHeight = maxH + 'px';
+                bodyEl.style.overflow = 'hidden';
+                var wrap = bodyEl.parentNode;
+                var btn = document.createElement('button');
+                btn.type = 'button';
+                btn.className = 'tl-show-more';
+                btn.textContent = 'Show more...';
+                wrap.appendChild(btn);
+                btn.addEventListener('click', function () {
+                    if (bodyEl.style.maxHeight) {
+                        bodyEl.style.maxHeight = '';
+                        bodyEl.style.overflow = '';
+                        btn.textContent = 'Show less';
+                    } else {
+                        bodyEl.style.maxHeight = maxH + 'px';
+                        bodyEl.style.overflow = 'hidden';
+                        btn.textContent = 'Show more...';
+                    }
+                });
+            }
+        });
 
         list.querySelectorAll('.tl-comment-delete').forEach(function (button) {
             button.addEventListener('click', function (event) {
                 event.preventDefault();
                 var commentId = button.getAttribute('data-comment-id');
-                if (!commentId) {
-                    return;
-                }
+                if (!commentId) return;
                 button.disabled = true;
                 ajax('deleteComment', { commentId: String(commentId) })
                     .then(function () {

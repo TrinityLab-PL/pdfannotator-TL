@@ -2892,3 +2892,196 @@ body.tl-pdf-fullscreen #pdftoolbar {
     text-overflow: ellipsis;
     white-space: nowrap;
 }
+
+/* F5: QAC comment panel styles */
+.path-mod-pdfannotator .tl-comment-body {
+    font-size: 1.17em;
+    line-height: 1.27em;
+    color: #111827;
+    font-weight: 300;
+}
+
+.path-mod-pdfannotator .tl-comment-body a {
+    text-decoration: underline;
+    color: #2563eb;
+}
+
+.path-mod-pdfannotator .tl-comment-body a:hover {
+    color: #1d4ed8;
+}
+
+.path-mod-pdfannotator .tl-comment-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 20px;
+    height: 20px;
+    border-radius: 4px;
+    font-size: 11px;
+    font-weight: 700;
+    flex-shrink: 0;
+    margin-right: 4px;
+}
+
+.path-mod-pdfannotator .tl-badge-question {
+    background: #dbeafe;
+    color: #1d4ed8;
+}
+
+.path-mod-pdfannotator .tl-badge-comment {
+    background: #f1f5f9;
+    color: #475569;
+}
+
+.path-mod-pdfannotator .tl-badge-answer {
+    background: #dcfce7;
+    color: #166534;
+}
+
+.path-mod-pdfannotator .tl-comment-root-actions {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-top: 8px;
+    flex-wrap: wrap;
+}
+
+.path-mod-pdfannotator .tl-reply-btn {
+    border: 1px solid #cbd5e1;
+    background: #fff;
+    color: #374151;
+    border-radius: 6px;
+    height: 28px;
+    padding: 0 10px;
+    font-size: 12px;
+    font-weight: 400;
+    cursor: pointer;
+}
+
+.path-mod-pdfannotator .tl-reply-btn:hover {
+    background: #f1f5f9;
+}
+
+.path-mod-pdfannotator .tl-reply-form {
+    margin-top: 8px;
+}
+
+.path-mod-pdfannotator .tl-reply-input {
+    width: 100%;
+    border: 1px solid #cbd5e1;
+    border-radius: 8px;
+    padding: 6px 8px;
+    font-size: 13px;
+    font-weight: 300;
+    resize: vertical;
+    background: #fff;
+    box-sizing: border-box;
+}
+
+.path-mod-pdfannotator .tl-reply-submit {
+    margin-top: 6px;
+    height: 28px;
+    border: 1px solid #394f96;
+    background: #394f96;
+    color: #fff;
+    border-radius: 6px;
+    padding: 0 12px;
+    font-size: 12px;
+    font-weight: 300;
+    cursor: pointer;
+}
+
+.path-mod-pdfannotator .tl-reply-submit:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
+.path-mod-pdfannotator .tl-comment-answer {
+    margin-left: 20px;
+    border-left: 2px solid #e2e8f0;
+}
+
+.path-mod-pdfannotator .tl-comment-parent-link {
+    font-size: 11px;
+    color: #64748b;
+    margin-bottom: 4px;
+}
+
+.path-mod-pdfannotator .tl-show-more {
+    border: 0;
+    background: transparent;
+    color: #2563eb;
+    font-size: 12px;
+    padding: 2px 0;
+    cursor: pointer;
+    display: block;
+    margin-top: 2px;
+}
+
+.path-mod-pdfannotator .tl-show-more:hover {
+    text-decoration: underline;
+}
+
+.path-mod-pdfannotator .tl-composer-label {
+    font-size: 11px;
+    color: #64748b;
+    margin-bottom: 6px;
+    min-height: 16px;
+}
+
+.path-mod-pdfannotator .tl-composer-actions {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+.path-mod-pdfannotator .tl-composer-btn {
+    height: 32px;
+    border: 1px solid #cbd5e1;
+    background: #fff;
+    color: #374151;
+    border-radius: 6px;
+    padding: 0 12px;
+    font-size: 12px;
+    font-weight: 400;
+    cursor: pointer;
+}
+
+.path-mod-pdfannotator .tl-composer-btn:hover:not(:disabled) {
+    background: #f1f5f9;
+}
+
+.path-mod-pdfannotator .tl-composer-btn:disabled {
+    opacity: 0.45;
+    cursor: not-allowed;
+}
+
+.path-mod-pdfannotator .tl-composer-btn-question {
+    border-color: #93c5fd;
+    color: #1d4ed8;
+}
+
+.path-mod-pdfannotator .tl-composer-btn-question:hover:not(:disabled) {
+    background: #eff6ff;
+}
+
+.path-mod-pdfannotator .tl-composer-btn-submit {
+    border-color: #394f96;
+    background: #394f96;
+    color: #fff;
+    font-weight: 300;
+}
+
+.path-mod-pdfannotator .tl-composer-btn-submit:hover:not(:disabled) {
+    background: #2e407a;
+    border-color: #2b3c71;
+}
+
+.path-mod-pdfannotator .tl-composer-input-wrap {
+    margin-top: 8px;
+}
+
+.path-mod-pdfannotator .tl-comment-body-wrap {
+    margin-top: 4px;
+}

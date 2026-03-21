@@ -263,15 +263,14 @@ class pdfannotator_annotation {
     }
 
     /**
-     * Method takes an annotation's id and returns the content of the underlying question comment
-     *
-     * @param type $annotationId
-     * @return type
+     * Returns the text content of a parent comment (question or comment root) by its id.
+     * @param int $parentid id of the parent comment record
+     * @return string
      */
-    public static function get_question($annotationid) {
+    public static function get_question($parentid) {
         global $DB;
-        $question = $DB->get_record('pdfannotator_comments', ['annotationid' => $annotationid, 'isquestion' => 1], 'content');
-        return $question->content;
+        $question = $DB->get_record('pdfannotator_comments', ['id' => $parentid], 'content');
+        return $question ? $question->content : '';
     }
 
 }

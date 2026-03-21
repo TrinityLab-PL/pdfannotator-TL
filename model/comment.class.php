@@ -39,7 +39,7 @@ class pdfannotator_comment {
      * @param type $annotationid specifies the annotation (usually a highlight) to be commented
      * @param String $content the text or comment itself
      */
-    public static function create($documentid, $annotationid, $content, $visibility, $isquestion, $cm, $context) {
+    public static function create($documentid, $annotationid, $content, $visibility, $posttype, $parentid, $cm, $context) {
         global $DB, $USER, $CFG;
 
         if (!$DB->record_exists('pdfannotator_annotations', ['id' => $annotationid])) {
@@ -57,7 +57,27 @@ class pdfannotator_comment {
         $datarecord->timecreated = time(); // Moodle method: DateTime::getTimestamp();.
         $datarecord->timemodified = $datarecord->timecreated;
         $datarecord->visibility = $visibility;
-        $datarecord->isquestion = $isquestion;
+        $allowed = ['question', 'comment', 'answer'];
+        if (!in_array($posttype, $allowed, true)) {
+            return false;
+        }
+        if ($posttype === 'answer') {
+            if (empty($parentid)) {
+                return false;
+            }
+            $parent = $DB->get_record('pdfannotator_comments', ['id' => $parentid]);
+            if (!$parent
+                || (int)$parent->annotationid !== (int)$annotationid
+                || (int)$parent->pdfannotatorid !== (int)$documentid
+                || !in_array($parent->posttype, ['question', 'comment'], true)
+                || !empty($parent->parentid)
+                || $parent->isdeleted == 1) {
+                return false;
+            }
+        }
+        $datarecord->posttype  = $posttype;
+        $datarecord->parentid  = ($posttype === 'answer') ? $parentid : null;
+        $datarecord->isquestion = ($posttype === 'question') ? 1 : 0;
 
         // Create a new record in the table named 'comments' and return its id, which is created by autoincrement.
         $commentuuid = $DB->insert_record('pdfannotator_comments', $datarecord, true);
@@ -89,12 +109,12 @@ class pdfannotator_comment {
 
         $anonymous = $visibility == 'anonymous' ? true : false;
         $modulename = format_string($cm->name, true);
-        if ($isquestion == 0) {
+        if ($posttype === 'answer') {
             // Notify subscribed users.
             $comment = new stdClass();
             $comment->answeruser = $visibility == 'public' ? fullname($USER) : 'Anonymous';
             $comment->content = $content;
-            $comment->question = pdfannotator_annotation::get_question($annotationid);
+            $comment->question = pdfannotator_annotation::get_question($parentid);
             $page = pdfannotator_annotation::get_pageid($annotationid);
             $comment->urltoanswer = $CFG->wwwroot . '/mod/pdfannotator/view.php?id=' .
                     $cm->id . '&page=' . $page . '&annoid=' . $annotationid . '&commid=' . $commentuuid;
@@ -112,7 +132,7 @@ class pdfannotator_comment {
                     pdfannotator_notify_manager($recipient, $course, $cm, 'newanswer', $messagetext, $anonymous);
                 }
             }
-        } else if ($visibility != 'private') {
+        } else if ($posttype === 'question' && $visibility != 'private') {
             self::insert_subscription($annotationid, $context);
 
             // Notify all users, that there is a new question.
@@ -159,11 +179,11 @@ class pdfannotator_comment {
         global $DB, $USER;
 
         // Get the ids and text content of all comments attached to this annotation/highlight.
-        $sql = "SELECT c.id, c.content, c.userid, c.visibility, c.isquestion, c.isdeleted, c.ishidden, c.timecreated, "
+        $sql = "SELECT c.id, c.content, c.userid, c.visibility, c.isquestion, c.posttype, c.parentid, c.isdeleted, c.ishidden, c.timecreated, "
                 . "c.timemodified, c.modifiedby, c.solved, c.annotationid, SUM(vote) AS votes "
                 . "FROM {pdfannotator_comments} c LEFT JOIN {pdfannotator_votes} v"
                 . " ON c.id=v.commentid WHERE annotationid = ?"
-                . " GROUP BY c.id, c.content, c.userid, c.visibility, c.isquestion, c.isdeleted, c.ishidden, c.timecreated, "
+                . " GROUP BY c.id, c.content, c.userid, c.visibility, c.isquestion, c.posttype, c.parentid, c.isdeleted, c.ishidden, c.timecreated, "
                 . "c.timemodified, c.modifiedby, c.solved, c.annotationid"
                 . " ORDER BY c.timecreated";
         $a = array();
@@ -490,7 +510,7 @@ class pdfannotator_comment {
             return false;
         }
 
-        $comment = $DB->get_record('pdfannotator_comments', array('annotationid' => $annotationid, 'isquestion' => '1'));
+        $comment = $DB->get_record('pdfannotator_comments', array('annotationid' => $annotationid, 'posttype' => 'question'));
         if (!pdfannotator_can_see_comment($comment, $context)) {
             return false;
         }
@@ -510,7 +530,7 @@ class pdfannotator_comment {
      */
     public static function delete_subscription($annotationid) {
         global $DB, $USER;
-        $count = $DB->count_records('pdfannotator_comments', array('annotationid' => $annotationid, 'isquestion' => 0));
+        $count = $DB->count_records_select('pdfannotator_comments', "annotationid = ? AND posttype != 'question'", [$annotationid]);
         $success = $DB->delete_records('pdfannotator_subscriptions', array('annotationid' => $annotationid, 'userid' => $USER->id));
         if (!empty($success)) {
             return $count;
@@ -693,7 +713,7 @@ class pdfannotator_comment {
         $where = implode(' AND ', $conditions);
 
         // Self-join: single parent question per annotation (MIN id) — avoids N+1.
-        $sql = "SELECT c.id, c.content, c.isquestion, c.ishidden,
+        $sql = "SELECT c.id, c.content, c.isquestion, c.posttype, c.parentid, c.ishidden,
                        c.annotationid, c.visibility, c.userid,
                        a.page, a.data AS adata,
                        t.name AS annotationtype,
@@ -773,6 +793,8 @@ class pdfannotator_comment {
                 'annotationid'   => (int)$record->annotationid,
                 'annotationtype' => $atype,
                 'isquestion'     => (int)$record->isquestion,
+                'posttype'       => $record->posttype,
+                'parentid'       => isset($record->parentid) ? (int)$record->parentid : null,
                 '_sorty'         => $sorty,
                 '_sortx'         => $sortx,
             ];
