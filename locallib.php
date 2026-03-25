@@ -68,7 +68,7 @@ function pdfannotator_display_embed($pdfannotator, $cm, $course, $file, $page = 
     $PAGE->requires->js('/mod/pdfannotator/lib/konva/konva_loader.js?ver=00001', false);
     $PAGE->requires->js('/mod/pdfannotator/shared/textclipper.js', false);
     $PAGE->requires->js('/mod/pdfannotator/lib/lazy-brush/lazy-brush.umd.cjs?ver=00001', false);
-    $PAGE->requires->js('/mod/pdfannotator/js_new/pdfannotator_new.v00054.js?ver=00070', false);
+    $PAGE->requires->js('/mod/pdfannotator/js_new/pdfannotator_new.v00054.js?ver=00071', false);
     $PAGE->requires->js('/mod/pdfannotator/shared/locallib.js?ver=00008', false);
 
     // Pass parameters from PHP to JavaScript.
@@ -87,6 +87,7 @@ function pdfannotator_display_embed($pdfannotator, $cm, $course, $file, $page = 
     $capabilities->viewposts = has_capability('mod/pdfannotator:viewposts', $context);
     $capabilities->viewreports = has_capability('mod/pdfannotator:viewreports', $context);
     $capabilities->deleteany = has_capability('mod/pdfannotator:deleteany', $context);
+    $capabilities->deleteown = has_capability('mod/pdfannotator:deleteown', $context);
     $capabilities->hidecomment = has_capability('mod/pdfannotator:hidecomments', $context);
     $capabilities->seehiddencomments = has_capability('mod/pdfannotator:seehiddencomments', $context);
     $capabilities->usetextbox = has_capability('mod/pdfannotator:usetextbox', $context);

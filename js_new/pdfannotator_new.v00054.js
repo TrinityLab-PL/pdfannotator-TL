@@ -2509,6 +2509,10 @@
     function renderCommentsPanel(commentsPayload) {
         var list = document.querySelector('#comment-wrapper .comment-list-container');
         if (!list) return;
+        function canShowDeleteComment(item) {
+            var c = state.capabilities || {};
+            return !!(!item.isdeleted && (c.deleteany || (c.deleteown && item.owner)));
+        }
         var comments = (commentsPayload && Array.isArray(commentsPayload.comments)) ? commentsPayload.comments : [];
         if (!comments.length) {
             if (list.querySelector('.tl-comment-item--pending')) return;
@@ -2640,7 +2644,7 @@
                 + '<button type="button" class="tl-thread-toggle">Collapse</button>'
                 + '<span class="tl-comment-meta-end">'
                 + '<span class="tl-comment-time">' + time + '</span>'
-                + '<button type="button" class="tl-comment-delete" data-comment-id="' + escapeHtml(rootDbId) + '" title="Delete"><i class="fa fa-trash"></i></button>'
+                + (canShowDeleteComment(root) ? '<button type="button" class="tl-comment-delete" data-comment-id="' + escapeHtml(rootDbId) + '" title="Delete"><i class="fa fa-trash"></i></button>' : '')
                 + '</span>'
                 + '</div>'
                 + '<div class="tl-comment-author"><strong>' + user + '</strong></div>'
@@ -2677,7 +2681,7 @@
                     + '<span class="tl-comment-badge tl-badge-answer" title="Answer">A</span>'
                     + '<span class="tl-comment-meta-end">'
                     + '<span class="tl-comment-time">' + ansTime + '</span>'
-                    + '<button type="button" class="tl-comment-delete" data-comment-id="' + escapeHtml(ansDbId) + '" title="Delete"><i class="fa fa-trash"></i></button>'
+                    + (canShowDeleteComment(ans) ? '<button type="button" class="tl-comment-delete" data-comment-id="' + escapeHtml(ansDbId) + '" title="Delete"><i class="fa fa-trash"></i></button>' : '')
                     + '</span>'
                     + '</div>'
                     + '<div class="tl-comment-author"><strong>' + ansUser + '</strong></div>'
