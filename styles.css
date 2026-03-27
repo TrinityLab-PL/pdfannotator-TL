@@ -2953,6 +2953,42 @@ body.tl-pdf-fullscreen #pdftoolbar {
     color: #538721;
 }
 
+
+/* TL_MARK_SOLUTION: Q check + chosen A accent (brand green #538721) */
+.path-mod-pdfannotator .tl-q-solved-check {
+    color: #538721;
+    font-size: 14px;
+    margin-left: 4px;
+    vertical-align: middle;
+}
+
+.path-mod-pdfannotator .tl-comment-answer.tl-answer-is-solution {
+    box-shadow: inset 5px 0 0 0 rgba(83, 135, 33, 0.42);
+}
+
+.path-mod-pdfannotator .tl-mark-solution-btn {
+    display: block;
+    margin-top: 6px;
+    border: 0;
+    background: transparent;
+    padding: 0;
+    font-size: 11px;
+    font-weight: 400;
+    color: #538721;
+    cursor: pointer;
+    text-decoration: underline;
+    text-align: left;
+}
+
+.path-mod-pdfannotator .tl-mark-solution-btn:hover {
+    color: #3d6619;
+}
+
+.path-mod-pdfannotator .tl-mark-solution-btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
 .path-mod-pdfannotator .tl-comment-root-actions {
     display: flex;
     align-items: center;
@@ -3017,7 +3053,7 @@ body.tl-pdf-fullscreen #pdftoolbar {
     border-left: 0;
 }
 
-/* TL_THREAD_ANSWER_IN_THREAD_V59 + TL_THREAD_REPLY_PADDING_V61: grid col 2; jawny padding (lewo 0 = wcięcie z grida) */
+/* TL_THREAD_ANSWER_IN_THREAD_V59 + TL_REPLY_PADDING_V63: prawo 0 — meta/kosz w linii z rodzicem; lewo 12px */
 .path-mod-pdfannotator .tl-comment-children .tl-comment-answer {
     grid-column: 2;
     margin-left: 0;
@@ -3025,8 +3061,9 @@ body.tl-pdf-fullscreen #pdftoolbar {
     max-width: 100%;
     min-width: 0;
     box-sizing: border-box;
-    padding: 10px 12px 10px 0;
+    padding: 10px 0 10px 12px;
 }
+
 
 .path-mod-pdfannotator .tl-comment-parent-link {
     font-size: 11px;

@@ -2568,23 +2568,93 @@
             return !isNaN(n) && n > 0;
         }
 
-        var roots = [];
-        var answersByParent = {};
-        comments.forEach(function (item) {
+        function normalizePosttype(item) {
             var pt = item.posttype;
             if (!pt) {
-                if (item.isquestion) pt = 'question';
-                else if (hasParentId(item.parentid)) pt = 'answer';
-                else pt = 'comment';
+                if (item.isquestion) {
+                    pt = 'question';
+                } else if (hasParentId(item.parentid)) {
+                    pt = 'answer';
+                } else {
+                    pt = 'comment';
+                }
             }
+            return pt;
+        }
+
+        var idSet = {};
+        var commentsById = {};
+        comments.forEach(function (item) {
+            var pt = normalizePosttype(item);
             item._posttype = pt;
-            if (pt === 'answer' && hasParentId(item.parentid)) {
-                var pid = String(item.parentid);
-                if (!answersByParent[pid]) answersByParent[pid] = [];
-                answersByParent[pid].push(item);
-            } else {
-                roots.push(item);
+            var cid = String(item.id || item.uuid || '');
+            if (cid) {
+                idSet[cid] = true;
+                commentsById[cid] = item;
             }
+        });
+
+        var roots = [];
+        comments.forEach(function (item) {
+            var pkey = hasParentId(item.parentid) ? String(item.parentid) : '';
+            if (pkey && idSet[pkey]) {
+                return;
+            }
+            roots.push(item);
+        });
+
+        var rootIdSet = {};
+        roots.forEach(function (r) {
+            rootIdSet[String(r.id || r.uuid)] = true;
+        });
+
+        function threadRootIdFor(item) {
+            var cur = item;
+            var guard = 0;
+            while (cur && guard++ < 150) {
+                var cid = String(cur.id || cur.uuid);
+                var pid = hasParentId(cur.parentid) ? String(cur.parentid) : '';
+                if (!pid || !idSet[pid]) {
+                    return cid;
+                }
+                cur = commentsById[pid];
+                if (!cur) {
+                    return cid;
+                }
+            }
+            return String(item.id || item.uuid);
+        }
+
+        var flatByRoot = {};
+        roots.forEach(function (r) {
+            flatByRoot[String(r.id || r.uuid)] = [];
+        });
+        comments.forEach(function (item) {
+            var iid = String(item.id || item.uuid);
+            if (rootIdSet[iid]) {
+                return;
+            }
+            var tr = threadRootIdFor(item);
+            if (!flatByRoot[tr]) {
+                flatByRoot[tr] = [];
+            }
+            flatByRoot[tr].push(item);
+        });
+
+        function sortByTime(a, b) {
+            var ta = (a.timecreatedts != null) ? parseInt(a.timecreatedts, 10) : 0;
+            var tb = (b.timecreatedts != null) ? parseInt(b.timecreatedts, 10) : 0;
+            if (ta !== tb) {
+                return ta - tb;
+            }
+            var ia = parseInt(a.id || a.uuid || 0, 10) || 0;
+            var ib = parseInt(b.id || b.uuid || 0, 10) || 0;
+            return ia - ib;
+        }
+
+        roots.sort(sortByTime);
+        Object.keys(flatByRoot).forEach(function (k) {
+            flatByRoot[k].sort(sortByTime);
         });
 
         list.innerHTML = '';
@@ -2607,12 +2677,13 @@
                 if (!content) { input.focus(); return; }
                 if (!state.commentTarget || !state.commentTarget.annotationId) return;
                 submitBtn.disabled = true;
+                var pid = parseInt(parentId, 10) || 0;
                 ajax('addComment', {
                     annotationId: String(state.commentTarget.annotationId),
                     content: content,
                     visibility: visEl.value || 'public',
                     posttype: posttype,
-                    parentid: parentId,
+                    parentid: pid,
                     pdfannotator_addcomment_editoritemid: '0'
                 }).then(function () {
                     input.value = '';
@@ -2642,7 +2713,7 @@
             return div;
         }
 
-        function bindActionRow(container, actionRow, commentPosttype, commentParentId, replyParentId) {
+        function bindActionRow(container, actionRow, nodeIdStr) {
             var visEl      = actionRow.querySelector('.tl-item-visibility');
             var btnComment = actionRow.querySelector('.tl-action-add-comment');
             var btnReply   = actionRow.querySelector('.tl-action-reply');
@@ -2657,25 +2728,103 @@
                 var shown = form.style.display !== 'none';
                 form.style.display  = shown ? 'none' : 'block';
                 other.style.display = 'none';
-                if (!shown) form.querySelector('.tl-inline-input').focus();
+                if (!shown) {
+                    form.querySelector('.tl-inline-input').focus();
+                }
             }
 
             btnComment.addEventListener('click', function () { toggle(commentForm); });
             btnReply.addEventListener('click',   function () { toggle(replyForm); });
 
-            bindSubmit(commentForm, visEl, commentPosttype, commentParentId);
-            bindSubmit(replyForm,   visEl, 'answer',        replyParentId);
+            bindSubmit(commentForm, visEl, 'comment', nodeIdStr);
+            bindSubmit(replyForm,   visEl, 'answer',  nodeIdStr);
         }
 
-        roots.forEach(function (root) {
-            var rootDbId      = String(root.uuid || root.id || '');
-            var rootCommentId = String(root.id   || root.uuid || '');
-            var pt            = root._posttype;
-            var badgeLabel    = pt === 'question' ? 'Q' : 'C';
-            var badgeTitle    = pt === 'question' ? 'Question' : 'Comment';
-            var user          = escapeHtml(root.username || 'Użytkownik');
-            var time          = escapeHtml(formatPolishTimestamp(root.timecreatedts, root.timecreated || '') || root.timecreated || '');
-            var body          = root.displaycontent || escapeHtml(root.content || '');
+        function renderFlatThreadRow(item, childrenDiv, threadHasQuestionRoot, questionAuthorId) {
+            var nodeDbId  = String(item.uuid || item.id || '');
+            var nodeIdStr = String(item.id   || item.uuid || '');
+            var pt        = item._posttype;
+            var badgeLabel = pt === 'question' ? 'Q' : (pt === 'answer' ? 'A' : 'C');
+            var badgeTitle = pt === 'question' ? 'Question' : (pt === 'answer' ? 'Answer' : 'Comment');
+            var user   = escapeHtml(item.username || 'Użytkownik');
+            var time   = escapeHtml(formatPolishTimestamp(item.timecreatedts, item.timecreated || '') || item.timecreated || '');
+            var body   = item.displaycontent || escapeHtml(item.content || '');
+
+            var article = document.createElement('article');
+            article.className = 'tl-comment-item tl-comment-answer';
+            if (pt === 'answer' && item.solved) {
+                article.classList.add('tl-answer-is-solution');
+            }
+            article.id = 'tl-cmt-' + nodeDbId;
+            article.setAttribute('data-comment-id', nodeDbId);
+
+            var metaTop = '<div class="tl-comment-meta-top">'
+                + '<span class="tl-comment-badge tl-badge-' + (pt === 'answer' ? 'answer' : 'comment')
+                + '" title="' + badgeTitle + '">' + badgeLabel + '</span>'
+                + '<span class="tl-comment-meta-end">'
+                + '<span class="tl-comment-time">' + time + '</span>'
+                + (canShowDeleteComment(item)
+                    ? '<button type="button" class="tl-comment-delete" data-comment-id="' + escapeHtml(nodeDbId)
+                    + '" title="Delete"><i class="fa fa-trash"></i></button>' : '')
+                + '</span>'
+                + '</div>';
+
+            article.innerHTML = metaTop
+                + '<div class="tl-comment-author"><strong>' + user + '</strong></div>'
+                + '<div class="tl-comment-body-wrap"><div class="tl-comment-body tl-comment-body-collapsible">' + body + '</div></div>';
+
+            function canShowMarkSolution() {
+                var caps = state.capabilities || {};
+                var uid = parseInt(state.userId, 10) || 0;
+                if (!threadHasQuestionRoot || pt !== 'answer') {
+                    return false;
+                }
+                if (caps.markcorrectanswer) {
+                    return true;
+                }
+                var qid = parseInt(questionAuthorId, 10) || 0;
+                return qid > 0 && uid === qid;
+            }
+
+            if (canShowMarkSolution()) {
+                var msBtn = document.createElement('button');
+                msBtn.type = 'button';
+                msBtn.className = 'tl-mark-solution-btn';
+                msBtn.textContent = 'Mark as solution';
+                msBtn.addEventListener('click', function () {
+                    msBtn.disabled = true;
+                    ajax('markSolved', { commentid: nodeIdStr })
+                        .then(function () {
+                            if (state.commentTarget && state.commentTarget.annotationId) {
+                                loadCommentsForAnnotation(state.commentTarget.annotationId, state.commentTarget.annotationType);
+                            }
+                        })
+                        .catch(function (err) {
+                            console.error('markSolved failed', err);
+                        })
+                        .finally(function () {
+                            msBtn.disabled = false;
+                        });
+                });
+                article.appendChild(msBtn);
+            }
+
+            var actionRow = buildActionRow();
+            article.appendChild(actionRow);
+            bindActionRow(article, actionRow, nodeIdStr);
+
+            childrenDiv.appendChild(article);
+        }
+
+        function renderRoot(root) {
+            var rootDbId  = String(root.uuid || root.id || '');
+            var rootIdStr = String(root.id   || root.uuid || '');
+            var pt        = root._posttype;
+            var badgeLabel = pt === 'question' ? 'Q' : 'C';
+            var badgeTitle = pt === 'question' ? 'Question' : 'Comment';
+            var user   = escapeHtml(root.username || 'Użytkownik');
+            var time   = escapeHtml(formatPolishTimestamp(root.timecreatedts, root.timecreated || '') || root.timecreated || '');
+            var body   = root.displaycontent || escapeHtml(root.content || '');
 
             var article = document.createElement('article');
             article.className = 'tl-comment-item tl-comment-root';
@@ -2695,7 +2844,7 @@
 
             var actionRow = buildActionRow();
             article.appendChild(actionRow);
-            bindActionRow(article, actionRow, 'comment', 0, rootCommentId);
+            bindActionRow(article, actionRow, rootIdStr);
 
             var childrenDiv = document.createElement('div');
             childrenDiv.className = 'tl-comment-children';
@@ -2709,32 +2858,27 @@
 
             list.appendChild(article);
 
-            var answers = answersByParent[rootCommentId] || [];
-            answers.forEach(function (ans) {
-                var ansDbId   = String(ans.uuid || ans.id || '');
-                var ansUser   = escapeHtml(ans.username || 'Użytkownik');
-                var ansTime   = escapeHtml(formatPolishTimestamp(ans.timecreatedts, ans.timecreated || '') || ans.timecreated || '');
-                var ansBody   = ans.displaycontent || escapeHtml(ans.content || '');
-                var ansArticle = document.createElement('article');
-                ansArticle.className = 'tl-comment-item tl-comment-answer';
-                ansArticle.id = 'tl-cmt-' + ansDbId;
-                ansArticle.setAttribute('data-comment-id', ansDbId);
-                ansArticle.innerHTML =
-                    '<div class="tl-comment-meta-top">'
-                    + '<span class="tl-comment-badge tl-badge-answer" title="Answer">A</span>'
-                    + '<span class="tl-comment-meta-end">'
-                    + '<span class="tl-comment-time">' + ansTime + '</span>'
-                    + (canShowDeleteComment(ans) ? '<button type="button" class="tl-comment-delete" data-comment-id="' + escapeHtml(ansDbId) + '" title="Delete"><i class="fa fa-trash"></i></button>' : '')
-                    + '</span>'
-                    + '</div>'
-                    + '<div class="tl-comment-author"><strong>' + ansUser + '</strong></div>'
-                    + '<div class="tl-comment-body-wrap"><div class="tl-comment-body tl-comment-body-collapsible">' + ansBody + '</div></div>';
+            if (pt === 'question' && root.solved) {
+                var badgeEl = article.querySelector('.tl-comment-badge');
+                if (badgeEl) {
+                    var ok = document.createElement('i');
+                    ok.className = 'icon fa fa-check tl-q-solved-check';
+                    ok.setAttribute('title', 'Solved');
+                    ok.setAttribute('aria-hidden', 'true');
+                    badgeEl.after(ok);
+                }
+            }
 
-                var ansActionRow = buildActionRow();
-                ansArticle.appendChild(ansActionRow);
-                bindActionRow(ansArticle, ansActionRow, 'comment', 0, rootCommentId);
-                childrenDiv.appendChild(ansArticle);
+            var threadHasQuestionRoot = (pt === 'question');
+            var questionAuthorId = threadHasQuestionRoot ? root.userid : null;
+            var flat = flatByRoot[rootIdStr] || [];
+            flat.forEach(function (row) {
+                renderFlatThreadRow(row, childrenDiv, threadHasQuestionRoot,questionAuthorId);
             });
+        }
+
+        roots.forEach(function (root) {
+            renderRoot(root);
         });
 
         list.querySelectorAll('.tl-comment-body-collapsible').forEach(function (bodyEl) {

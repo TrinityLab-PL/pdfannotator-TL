@@ -68,7 +68,7 @@ function pdfannotator_display_embed($pdfannotator, $cm, $course, $file, $page = 
     $PAGE->requires->js('/mod/pdfannotator/lib/konva/konva_loader.js?ver=00001', false);
     $PAGE->requires->js('/mod/pdfannotator/shared/textclipper.js', false);
     $PAGE->requires->js('/mod/pdfannotator/lib/lazy-brush/lazy-brush.umd.js?ver=00002', false);
-    $PAGE->requires->js('/mod/pdfannotator/js_new/pdfannotator_new.v00054.js?ver=00072', false);
+    $PAGE->requires->js('/mod/pdfannotator/js_new/pdfannotator_new.v00054.js?ver=00076', false);
     $PAGE->requires->js('/mod/pdfannotator/shared/locallib.js?ver=00008', false);
 
     // Pass parameters from PHP to JavaScript.
@@ -94,6 +94,7 @@ function pdfannotator_display_embed($pdfannotator, $cm, $course, $file, $page = 
     $capabilities->usedrawing = has_capability('mod/pdfannotator:usedrawing', $context);
     $capabilities->useprint = has_capability('mod/pdfannotator:printdocument', $context);
     $capabilities->useprintcomments = has_capability('mod/pdfannotator:printcomments', $context);
+    $capabilities->markcorrectanswer = has_capability('mod/pdfannotator:markcorrectanswer', $context);
     // 3. Comment editor setting.
     $editorsettings = new stdClass();
     $editorsettings->active_editor = get_class(editors_get_preferred_editor(FORMAT_HTML));
@@ -2053,16 +2054,24 @@ function pdfannotator_is_phone() {
 
 function pdfannotator_get_last_answer($annotationid, $context) {
     global $DB;
-    $params = array('isquestion' => 0, 'annotationid' => $annotationid);
-    $answers = $DB->get_records('pdfannotator_comments', $params, 'timecreated DESC' );
+    $sql = "SELECT * FROM {pdfannotator_comments}
+            WHERE annotationid = ? AND isdeleted = 0 AND isquestion = 0
+            AND (
+                posttype = 'answer'
+                OR (
+                    (posttype IS NULL OR posttype = '')
+                    AND parentid IS NOT NULL AND parentid > 0
+                )
+            )
+            ORDER BY timecreated DESC";
+    $answers = $DB->get_records_sql($sql, [$annotationid], 0, 80);
 
     foreach ($answers as $answer) {
         if (!pdfannotator_can_see_comment($answer, $context)) {
             continue;
-        } else {
-            $answer->content = pdfannotator_get_relativelink($answer->content, $answer->id, $context);
-            return $answer;
         }
+        $answer->content = pdfannotator_get_relativelink($answer->content, $answer->id, $context);
+        return $answer;
     }
     return null;
 }
@@ -2099,8 +2108,17 @@ function pdfannotator_can_see_comment($comment, $context) {
  */
 function pdfannotator_count_answers($annotationid, $context) {
     global $DB;
-    $params = array('isquestion' => 0, 'annotationid' => $annotationid);
-    $answers = $DB->get_records('pdfannotator_comments', $params);
+    $sql = "SELECT * FROM {pdfannotator_comments}
+            WHERE annotationid = ? AND isdeleted = 0
+            AND (
+                posttype = 'answer'
+                OR (
+                    (posttype IS NULL OR posttype = '')
+                    AND parentid IS NOT NULL AND parentid > 0
+                    AND isquestion = 0
+                )
+            )";
+    $answers = $DB->get_records_sql($sql, [$annotationid]);
     $count = 0;
 
     foreach ($answers as $answer) {

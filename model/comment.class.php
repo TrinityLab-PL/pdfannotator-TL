@@ -33,6 +33,55 @@ require_once($CFG->dirroot . '/mod/pdfannotator/model/pdfannotator.php');
 class pdfannotator_comment {
 
     /**
+     * Validate parent comment for threaded replies.
+     *
+     * @param int $parentid
+     * @param int $documentid
+     * @param int $annotationid
+     * @return false|\stdClass
+     */
+    protected static function fetch_valid_parent($parentid, $documentid, $annotationid) {
+        global $DB;
+
+        $parentid = (int) $parentid;
+        if ($parentid <= 0) {
+            return false;
+        }
+        $parent = $DB->get_record('pdfannotator_comments', ['id' => $parentid]);
+        if (!$parent || (int) $parent->isdeleted === 1
+                || (int) $parent->annotationid !== (int) $annotationid
+                || (int) $parent->pdfannotatorid !== (int) $documentid) {
+            return false;
+        }
+        return $parent;
+    }
+
+    /**
+     * Walk parentid chain to thread root (top-level question or comment).
+     *
+     * @param int $commentid Any comment in the thread.
+     * @return int Root comment id or 0.
+     */
+    public static function get_thread_root_id($commentid) {
+        global $DB;
+
+        $id = (int) $commentid;
+        $guard = 0;
+        while ($id > 0 && $guard++ < 100) {
+            $row = $DB->get_record('pdfannotator_comments', ['id' => $id], 'id,parentid', IGNORE_MISSING);
+            if (!$row) {
+                return 0;
+            }
+            if (empty($row->parentid)) {
+                return (int) $row->id;
+            }
+            $id = (int) $row->parentid;
+        }
+        return 0;
+    }
+
+
+    /**
      * This method inserts a new record into mdl_pdfannotator_comments and returns its id
      *
      * @param type $documentid specifies the pdf
@@ -61,22 +110,33 @@ class pdfannotator_comment {
         if (!in_array($posttype, $allowed, true)) {
             return false;
         }
+        $parentid = (int) $parentid;
+
+        if ($posttype === 'question' && $parentid > 0) {
+            return false;
+        }
+
         if ($posttype === 'answer') {
-            if (empty($parentid)) {
+            if ($parentid <= 0) {
                 return false;
             }
-            $parent = $DB->get_record('pdfannotator_comments', ['id' => $parentid]);
-            if (!$parent
-                || (int)$parent->annotationid !== (int)$annotationid
-                || (int)$parent->pdfannotatorid !== (int)$documentid
-                || !in_array($parent->posttype, ['question', 'comment'], true)
-                || !empty($parent->parentid)
-                || $parent->isdeleted == 1) {
+            if (self::fetch_valid_parent($parentid, $documentid, $annotationid) === false) {
+                return false;
+            }
+        } else if ($posttype === 'comment' && $parentid > 0) {
+            if (self::fetch_valid_parent($parentid, $documentid, $annotationid) === false) {
                 return false;
             }
         }
+
         $datarecord->posttype  = $posttype;
-        $datarecord->parentid  = ($posttype === 'answer') ? $parentid : null;
+        if ($posttype === 'question') {
+            $datarecord->parentid = null;
+        } else if ($posttype === 'comment') {
+            $datarecord->parentid = ($parentid > 0) ? $parentid : null;
+        } else {
+            $datarecord->parentid = $parentid;
+        }
         $datarecord->isquestion = ($posttype === 'question') ? 1 : 0;
 
         // Create a new record in the table named 'comments' and return its id, which is created by autoincrement.
@@ -114,7 +174,8 @@ class pdfannotator_comment {
             $comment = new stdClass();
             $comment->answeruser = $visibility == 'public' ? fullname($USER) : 'Anonymous';
             $comment->content = $content;
-            $comment->question = pdfannotator_annotation::get_question($parentid);
+            $threadrootid = self::get_thread_root_id($parentid);
+            $comment->question = pdfannotator_annotation::get_question($threadrootid ? $threadrootid : $parentid);
             $page = pdfannotator_annotation::get_pageid($annotationid);
             $comment->urltoanswer = $CFG->wwwroot . '/mod/pdfannotator/view.php?id=' .
                     $cm->id . '&page=' . $page . '&annoid=' . $annotationid . '&commid=' . $commentuuid;
@@ -311,8 +372,9 @@ class pdfannotator_comment {
         // To delete or not to delete, that is the question.
         $annotationid = $comment->annotationid;
 
-        $select = "annotationid = ? AND timecreated > ? AND isdeleted = ?";
-        $wasanswered = $DB->record_exists_select('pdfannotator_comments', $select, [$annotationid, $comment->timecreated, 0]);
+        $wasanswered = $DB->record_exists_select('pdfannotator_comments',
+            'annotationid = ? AND parentid = ? AND isdeleted = ?',
+            [$annotationid, $commentid, 0]);
 
         $tobedeletedaswell = [];
         $hideannotation = 0;
@@ -395,8 +457,9 @@ class pdfannotator_comment {
         // To delete or not to delete, that is the question.
         $annotationid = $comment->annotationid;
 
-        $select = "annotationid = ? AND timecreated > ? AND isdeleted = ?";
-        $wasanswered = $DB->record_exists_select('pdfannotator_comments', $select, [$annotationid, $comment->timecreated, 0]);
+        $wasanswered = $DB->record_exists_select('pdfannotator_comments',
+            'annotationid = ? AND parentid = ? AND isdeleted = ?',
+            [$annotationid, $commentid, 0]);
 
         $tobedeletedaswell = [];
         $deleteannotation = 0;
@@ -551,33 +614,111 @@ class pdfannotator_comment {
     }
 
     /**
-     * Marks a comment as solved. A question will be closed (or opened) and a answer will be marked as correct.
-     * @param type $commentid
-     * @return boolean
+     * Marks question closed/open (toggle), or marks an answer as the thread solution (sets question solved + one answer).
+     *
+     * @param int $commentid
+     * @param \context_module $context
+     * @return bool
      */
     public static function mark_solved($commentid, $context) {
         global $DB, $USER;
+
         $comment = $DB->get_record('pdfannotator_comments', ['id' => $commentid]);
-        if ($comment->isquestion) {
-            // If comment is question, check if the user is allowed to close all questions or if he is the questions author.
+        if (!$comment) {
+            return false;
+        }
+
+        $posttype = isset($comment->posttype) ? (string) $comment->posttype : '';
+
+        if ((int) $comment->isquestion === 1 || $posttype === 'question') {
             $closeanyquestion = has_capability('mod/pdfannotator:closeanyquestion', $context);
             $closeownquestion = has_capability('mod/pdfannotator:closequestion', $context);
-            if (!$closeanyquestion && !($closeownquestion && ($comment->userid === $USER->id ))) {
+            if (!$closeanyquestion && !($closeownquestion && ((int) $comment->userid === (int) $USER->id))) {
                 return false;
             }
-        } else {
-            // If the comment is an answer.
-            if (!has_capability('mod/pdfannotator:markcorrectanswer', $context)) {
-                return false;
+            $newsolved = ((int) $comment->solved !== 0) ? 0 : (int) $USER->id;
+            $comment->solved = $newsolved;
+            $success = $DB->update_record('pdfannotator_comments', $comment);
+            if ($success && $newsolved === 0) {
+                self::clear_answer_solved_for_annotation((int) $comment->annotationid);
             }
+            return (bool) $success;
         }
-        if ($comment->solved != 0) {
-            $comment->solved = 0;
-        } else {
-            $comment->solved = $USER->id;
+
+        if ($posttype !== 'answer') {
+            return false;
         }
-        $success = $DB->update_record('pdfannotator_comments', $comment);
-        return $success;
+
+        return self::mark_answer_as_solution((int) $comment->id, $context);
+    }
+
+    /**
+     * Clear "chosen solution" flag on all answers in an annotation.
+     *
+     * @param int $annotationid
+     */
+    protected static function clear_answer_solved_for_annotation($annotationid) {
+        global $DB;
+        $DB->set_field_select('pdfannotator_comments', 'solved', 0,
+            'annotationid = ? AND posttype = ?', [$annotationid, 'answer']);
+    }
+
+    /**
+     * Mark one answer as solution: question.solved set, other answers cleared, selected answer highlighted via solved id.
+     *
+     * @param int $answerid
+     * @param \context_module $context
+     * @return bool
+     */
+    protected static function mark_answer_as_solution($answerid, $context) {
+        global $DB, $USER;
+
+        $answer = $DB->get_record('pdfannotator_comments', ['id' => $answerid]);
+        if (!$answer || (($answer->posttype ?? '') !== 'answer')) {
+            return false;
+        }
+
+        $annotationid = (int) $answer->annotationid;
+        $question = $DB->get_record_sql(
+            "SELECT * FROM {pdfannotator_comments} WHERE annotationid = ? AND isquestion = 1",
+            [$annotationid],
+            IGNORE_MULTIPLE
+        );
+        if (!$question) {
+            $question = $DB->get_record('pdfannotator_comments', [
+                'annotationid' => $annotationid,
+                'posttype' => 'question',
+            ], '*', IGNORE_MISSING);
+        }
+        if (!$question) {
+            return false;
+        }
+
+        $can = has_capability('mod/pdfannotator:markcorrectanswer', $context)
+            || ((int) $question->userid === (int) $USER->id);
+        if (!$can) {
+            return false;
+        }
+
+        $transaction = $DB->start_delegated_transaction();
+        try {
+            self::clear_answer_solved_for_annotation($annotationid);
+
+            $qrow = $DB->get_record('pdfannotator_comments', ['id' => $question->id], '*', MUST_EXIST);
+            $qrow->solved = (int) $USER->id;
+            $DB->update_record('pdfannotator_comments', $qrow);
+
+            $arow = $DB->get_record('pdfannotator_comments', ['id' => $answerid], '*', MUST_EXIST);
+            $arow->solved = (int) $USER->id;
+            $DB->update_record('pdfannotator_comments', $arow);
+
+            $transaction->allow_commit();
+        } catch (\Exception $e) {
+            $transaction->rollback($e);
+            return false;
+        }
+
+        return true;
     }
 
     public static function is_solved($commentid) {
