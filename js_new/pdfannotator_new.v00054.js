@@ -33,6 +33,7 @@
         ajaxNonce: 0,
         keyboardBound: false,
         deletedAnnotations: [],
+        recycleItems: [],
         pendingDeletedAnnotations: {},
         restoreInitAttempts: 0,
         annotationFastWarmupTimer: null,
@@ -1951,6 +1952,7 @@
 
     function renderQuestionRows(list, entries) {
         list.innerHTML = '';
+        list.classList.add('tl-q-overview');
         if (!Array.isArray(entries) || entries.length === 0) {
             list.innerHTML = '<div class="tl-comment-empty">No questions.</div>';
             return;
@@ -2074,6 +2076,7 @@
     function renderSearchResults(results) {
         var list = document.querySelector('#comment-wrapper .comment-list-container');
         if (!list) { return; }
+        list.classList.add('tl-q-overview');
         if (!Array.isArray(results) || results.length === 0) {
             list.innerHTML = '<div class="tl-comment-empty">No results.</div>';
             return;
@@ -2265,14 +2268,30 @@
         toggle.addEventListener('click', function (event) {
             event.preventDefault();
             list.hidden = !list.hidden;
-            renderRestoreList();
+            if (!list.hidden) {
+                fetchRecycleList();
+            } else {
+                renderRestoreList();
+            }
         });
         document.addEventListener('click', function (event) {
             if (!wrap.contains(event.target)) {
                 list.hidden = true;
             }
         });
-        renderRestoreList();
+        fetchRecycleList();
+    }
+
+    function fetchRecycleList() {
+        ajax('listRecycle', { _cb: String(Date.now()) })
+            .then(function (data) {
+                state.recycleItems = (data && Array.isArray(data.items)) ? data.items : [];
+                renderRestoreList();
+            })
+            .catch(function () {
+                state.recycleItems = [];
+                renderRestoreList();
+            });
     }
 
     function renderRestoreList() {
@@ -2281,24 +2300,23 @@
             return;
         }
         state.commentNavMuting = true;
-        if (!state.deletedAnnotations.length) {
-            list.innerHTML = '<div class="tl-restore-empty">No deleted annotations to restore.</div>';
+        if (!state.recycleItems.length) {
+            list.innerHTML = '<div class="tl-restore-empty">No items to restore.</div>';
             setTimeout(function () {
                 state.commentNavMuting = false;
             }, 0);
             return;
         }
-        list.innerHTML = state.deletedAnnotations.map(function (entry, index) {
-            var type = escapeHtml((entry.annotation && entry.annotation.type) || 'annotation');
-            var page = Number(entry.pageNumber) || 1;
+        list.innerHTML = state.recycleItems.map(function (entry, index) {
+            var lbl = escapeHtml(entry.label || ('#' + String(entry.serverId || index)));
             return '<button type="button" class="tl-restore-item" data-restore-index="' + String(index) + '">'
-                + 'Restore: ' + type + ' (Page ' + String(page) + ')</button>';
+                + lbl + '</button>';
         }).join('');
         list.querySelectorAll('.tl-restore-item').forEach(function (button) {
             button.addEventListener('click', function () {
                 var idx = parseInt(button.getAttribute('data-restore-index') || '-1', 10);
                 if (idx >= 0) {
-                    restoreDeletedAnnotation(idx);
+                    restoreRecycleEntry(idx);
                 }
             });
         });
@@ -2308,65 +2326,44 @@
     }
 
     function pushDeletedAnnotation(entry) {
-        state.deletedAnnotations.unshift(entry);
-        if (state.deletedAnnotations.length > 3) {
-            state.deletedAnnotations = state.deletedAnnotations.slice(0, 3);
-        }
-        renderRestoreList();
+        fetchRecycleList();
     }
 
-    function restoreDeletedAnnotation(index) {
-        if (index < 0 || index >= state.deletedAnnotations.length) {
+    function restoreRecycleEntry(index) {
+        var entry = state.recycleItems[index];
+        if (!entry || !entry.serverId) {
             return;
         }
-        var entry = state.deletedAnnotations[index];
-        state.deletedAnnotations.splice(index, 1);
-        renderRestoreList();
-
-        var source = clone(entry.annotation || {});
-        delete source.uuid;
-        delete source.class;
-        delete source.owner;
-        delete source.page;
-
-        ajax('create', {
-            page_Number: String(entry.pageNumber || 1),
-            annotation: JSON.stringify(source)
-        }).then(function (created) {
-            if (!created || !created.uuid) {
-                return;
-            }
-            var group = drawAnnotation(entry.pageNumber || 1, created);
-            var pageState = getPageState(entry.pageNumber || 1);
-            if (pageState) {
-                pageState.annotationLayer.draw();
-            }
-            var chain = Promise.resolve();
-            (entry.comments || []).forEach(function (comment) {
-                chain = chain.then(function () {
-                    return ajax('addComment', {
-                        annotationId: String(created.uuid),
-                        content: comment.content,
-                        visibility: comment.visibility || 'public',
-                        posttype: comment.posttype || 'comment',
-                        parentid: comment.parentid || 0,
-                        pdfannotator_addcomment_editoritemid: '0'
-                    }).catch(function () { return {}; });
-                });
-            });
-            return chain.then(function () {
-                delete state.pendingDeletedAnnotations[String(created.uuid || '')];
-                if (group) {
-                    selectAnnotation(entry.pageNumber || 1, group);
+        ajax('restoreRecycle', { entryId: String(entry.serverId) })
+            .then(function (data) {
+                if (!data || data.status !== 'success') {
+                    window.alert('Restore failed.');
+                    return;
                 }
-                ensureCommentPanelVisible();
-                ensureRestoreControls();
-                loadCommentsForAnnotation(created.uuid, created.type);
+                if (data.reloadCommentsFor) {
+                    var rid = String(data.reloadCommentsFor);
+                    loadCommentsForAnnotation(rid, state.commentTarget ? state.commentTarget.annotationType : '');
+                    fetchRecycleList();
+                    return;
+                }
+                if (data.annotationId != null) {
+                    var annId = String(data.annotationId);
+                    var pageNo = Number(data.pageNumber) || 1;
+                    return loadAndRenderAnnotations(pageNo, true).then(function () {
+                        ensureCommentPanelVisible();
+                        setCommentTarget(annId, '');
+                        loadCommentsForAnnotation(annId, '');
+                        fetchRecycleList();
+                    });
+                }
+                fetchRecycleList();
+            })
+            .catch(function (e) {
+                console.error('restoreRecycle', e);
+                window.alert('Restore failed.');
             });
-        }).catch(function (error) {
-            console.error('Restore annotation failed', error);
-        });
     }
+
 
     function initKeyboardShortcuts() {
         if (state.keyboardBound) {
@@ -2552,9 +2549,14 @@
     function renderCommentsPanel(commentsPayload) {
         var list = document.querySelector('#comment-wrapper .comment-list-container');
         if (!list) return;
+        list.classList.remove('tl-q-overview');
         function canShowDeleteComment(item) {
             var c = state.capabilities || {};
             return !!(!item.isdeleted && (c.deleteany || (c.deleteown && item.owner)));
+        }
+        function isCommentSolved(item) {
+            var s = item && item.solved;
+            return s === true || s === 1 || (typeof s === 'number' && s > 0) || s === '1';
         }
         var comments = (commentsPayload && Array.isArray(commentsPayload.comments)) ? commentsPayload.comments : [];
         if (!comments.length) {
@@ -2752,7 +2754,7 @@
 
             var article = document.createElement('article');
             article.className = 'tl-comment-item tl-comment-answer';
-            if (pt === 'answer' && item.solved) {
+            if (pt === 'answer' && isCommentSolved(item)) {
                 article.classList.add('tl-answer-is-solution');
             }
             article.id = 'tl-cmt-' + nodeDbId;
@@ -2773,10 +2775,24 @@
                 + '<div class="tl-comment-author"><strong>' + user + '</strong></div>'
                 + '<div class="tl-comment-body-wrap"><div class="tl-comment-body tl-comment-body-collapsible">' + body + '</div></div>';
 
+            var badgeElFlat = article.querySelector('.tl-comment-badge');
+            if (pt === 'question' && isCommentSolved(item) && badgeElFlat) {
+                var okq = document.createElement('i');
+                okq.className = 'icon fa fa-check tl-q-solved-check';
+                okq.setAttribute('title', 'Solved');
+                okq.setAttribute('aria-hidden', 'true');
+                badgeElFlat.after(okq);
+                var solvedPillFlat = document.createElement('span');
+                solvedPillFlat.className = 'tl-comment-badge tl-badge-answer tl-badge-solution-pill';
+                solvedPillFlat.setAttribute('title', 'Solved');
+                solvedPillFlat.textContent = 'SOLVED';
+                okq.after(solvedPillFlat);
+            }
+
             function canShowMarkSolution() {
                 var caps = state.capabilities || {};
                 var uid = parseInt(state.userId, 10) || 0;
-                if (!threadHasQuestionRoot || pt !== 'answer') {
+                if (!threadHasQuestionRoot || pt !== 'answer' || isCommentSolved(item)) {
                     return false;
                 }
                 if (caps.markcorrectanswer) {
@@ -2794,19 +2810,42 @@
                 msBtn.addEventListener('click', function () {
                     msBtn.disabled = true;
                     ajax('markSolved', { commentid: nodeIdStr })
-                        .then(function () {
+                        .then(function (res) {
+                            if (res && res.status === 'error') {
+                                window.alert('Could not mark as solution.');
+                                return;
+                            }
                             if (state.commentTarget && state.commentTarget.annotationId) {
                                 loadCommentsForAnnotation(state.commentTarget.annotationId, state.commentTarget.annotationType);
                             }
                         })
                         .catch(function (err) {
                             console.error('markSolved failed', err);
+                            window.alert('Could not mark as solution.');
                         })
                         .finally(function () {
                             msBtn.disabled = false;
                         });
                 });
-                article.appendChild(msBtn);
+                var metaTopEl = article.querySelector('.tl-comment-meta-top');
+                var metaEndEl = article.querySelector('.tl-comment-meta-end');
+                if (metaTopEl && metaEndEl) {
+                    metaTopEl.insertBefore(msBtn, metaEndEl);
+                } else {
+                    article.appendChild(msBtn);
+                }
+            }
+
+            if (pt === 'answer' && isCommentSolved(item)) {
+                var solutionPill = document.createElement('span');
+                solutionPill.className = 'tl-comment-badge tl-badge-answer tl-badge-solution-pill';
+                solutionPill.setAttribute('title', 'Solution');
+                solutionPill.textContent = 'SOLUTION';
+                var metaTopElSol = article.querySelector('.tl-comment-meta-top');
+                var metaEndElSol = article.querySelector('.tl-comment-meta-end');
+                if (metaTopElSol && metaEndElSol) {
+                    metaTopElSol.insertBefore(solutionPill, metaEndElSol);
+                }
             }
 
             var actionRow = buildActionRow();
@@ -2833,7 +2872,6 @@
             article.innerHTML =
                 '<div class="tl-comment-meta-top">'
                 + '<span class="tl-comment-badge tl-badge-' + pt + '" title="' + badgeTitle + '">' + badgeLabel + '</span>'
-                + '<button type="button" class="tl-thread-toggle">Collapse</button>'
                 + '<span class="tl-comment-meta-end">'
                 + '<span class="tl-comment-time">' + time + '</span>'
                 + (canShowDeleteComment(root) ? '<button type="button" class="tl-comment-delete" data-comment-id="' + escapeHtml(rootDbId) + '" title="Delete"><i class="fa fa-trash"></i></button>' : '')
@@ -2846,19 +2884,54 @@
             article.appendChild(actionRow);
             bindActionRow(article, actionRow, rootIdStr);
 
+            var toggleRow = document.createElement('div');
+            toggleRow.className = 'tl-thread-toggle-row';
+            toggleRow.innerHTML = '<div class="tl-thread-toggle-gutter" aria-hidden="true"></div>'
+                + '<div class="tl-thread-toggle-inner">'
+                + '<button type="button" class="tl-thread-toggle">'
+                + '<i class="icon fa fa-minus tl-thread-toggle-icon" aria-hidden="true"></i>'
+                + '<span class="tl-thread-toggle-label">Collapse thread</span>'
+                + '</button></div>';
+            article.appendChild(toggleRow);
+
             var childrenDiv = document.createElement('div');
             childrenDiv.className = 'tl-comment-children';
             article.appendChild(childrenDiv);
 
-            var toggleBtn = article.querySelector('.tl-thread-toggle');
+            var toggleBtn = toggleRow.querySelector('.tl-thread-toggle');
+            function syncThreadToggleUi(collapsed) {
+                var iconEl = toggleBtn.querySelector('.tl-thread-toggle-icon');
+                var labelEl = toggleBtn.querySelector('.tl-thread-toggle-label');
+                if (iconEl) {
+                    iconEl.className = 'icon tl-thread-toggle-icon fa ' + (collapsed ? 'fa-plus' : 'fa-minus');
+                }
+                if (labelEl) {
+                    labelEl.textContent = collapsed ? 'Expand thread' : 'Collapse thread';
+                }
+            }
             toggleBtn.addEventListener('click', function () {
                 var collapsed = childrenDiv.classList.toggle('tl-collapsed');
-                toggleBtn.textContent = collapsed ? 'Expand' : 'Collapse';
+                syncThreadToggleUi(collapsed);
             });
 
             list.appendChild(article);
 
-            if (pt === 'question' && root.solved) {
+            var flat = flatByRoot[rootIdStr] || [];
+            var qInThread = null;
+            if (pt === 'question') {
+                qInThread = root;
+            } else {
+                for (var qx = 0; qx < flat.length; qx++) {
+                    if (flat[qx]._posttype === 'question') {
+                        qInThread = flat[qx];
+                        break;
+                    }
+                }
+            }
+            var threadHasQuestionRoot = !!qInThread;
+            var questionAuthorId = qInThread ? qInThread.userid : null;
+
+            if (pt === 'question' && isCommentSolved(root)) {
                 var badgeEl = article.querySelector('.tl-comment-badge');
                 if (badgeEl) {
                     var ok = document.createElement('i');
@@ -2866,14 +2939,16 @@
                     ok.setAttribute('title', 'Solved');
                     ok.setAttribute('aria-hidden', 'true');
                     badgeEl.after(ok);
+                    var solvedPillRoot = document.createElement('span');
+                    solvedPillRoot.className = 'tl-comment-badge tl-badge-answer tl-badge-solution-pill';
+                    solvedPillRoot.setAttribute('title', 'Solved');
+                    solvedPillRoot.textContent = 'SOLVED';
+                    ok.after(solvedPillRoot);
                 }
             }
 
-            var threadHasQuestionRoot = (pt === 'question');
-            var questionAuthorId = threadHasQuestionRoot ? root.userid : null;
-            var flat = flatByRoot[rootIdStr] || [];
             flat.forEach(function (row) {
-                renderFlatThreadRow(row, childrenDiv, threadHasQuestionRoot,questionAuthorId);
+                renderFlatThreadRow(row, childrenDiv, threadHasQuestionRoot, questionAuthorId);
             });
         }
 
@@ -2914,7 +2989,19 @@
                 if (!commentId) return;
                 button.disabled = true;
                 ajax('deleteComment', { commentId: String(commentId) })
-                    .then(function () {
+                    .then(function (data) {
+                        if (data && data.status === 'error') {
+                            button.disabled = false;
+                            var msg = (data.message && String(data.message)) || '';
+                            if (!msg && data.errorcode) {
+                                msg = String(data.errorcode);
+                            }
+                            if (!msg) {
+                                msg = 'Could not delete this comment.';
+                            }
+                            window.alert(msg);
+                            return;
+                        }
                         if (state.commentTarget && state.commentTarget.annotationId) {
                             loadCommentsForAnnotation(state.commentTarget.annotationId, state.commentTarget.annotationType);
                         }
@@ -2922,6 +3009,9 @@
                     .catch(function (error) {
                         button.disabled = false;
                         console.error('Delete comment failed', error);
+                        try {
+                            window.alert('Could not delete this comment.');
+                        } catch (e) { }
                     });
             });
         });

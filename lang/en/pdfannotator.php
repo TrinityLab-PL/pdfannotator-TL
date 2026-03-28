@@ -516,6 +516,11 @@ $string['year'] = 'year';
 $string['years'] = 'years';
 $string['yesButton'] = 'Yes';
 
+
+$string['errordeletebranchhasothers'] = 'You cannot delete this comment because someone else has replied in this thread. A teacher can remove it if needed.';
+
+$string['recycle_label_annotation'] = 'Annotation {$a->type} (page {$a->page})';
+$string['recycle_label_comment'] = 'Post(s) ({$a->count})';
 $string['zoom'] = 'zoom';
 $string['zoomin'] = 'zoom in';
 $string['zoomout'] = 'zoom out';

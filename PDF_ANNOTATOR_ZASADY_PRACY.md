@@ -15,6 +15,7 @@
 
 - Nie zmieniać kodu poza pluginem `mod/pdfannotator/`.
 - Pliki objęte workflow: `shared/index.js` (chroniony), opcjonalnie `view.php`, `styles.css`, `fullscreen_enhanced.js` – w zależności od skryptu i backupu.
+- **Tylko to, o co poproszono:** realizować wyłącznie elementy wyraźnie opisane w poleceniu użytkownika. Bez dodawania „ulepszeń”, domyślnych interpretacji ani zmian w parametrach, których użytkownik nie wymienił. Przykład: jeśli podano nową wartość paddingu w jednym wymiarze lub ogólnie „ciaśniejszy pion”, należy zachować istniejący padding poziomy (np. `12px`), o ile użytkownik go nie zmienił — skrót `padding: 0.17em` dla wszystkich boków **nie jest** równoważny „zmniejsz tylko pion”.
 
 ---
 

@@ -658,6 +658,31 @@ function xmldb_pdfannotator_upgrade($oldversion) {
         upgrade_mod_savepoint(true, 2025090301, 'pdfannotator');
     }
 
+
+    if ($oldversion < 2026032810) {
+
+        $table = new xmldb_table('pdfannotator_recycle');
+
+        $table->add_field('id', XMLDB_TYPE_INTEGER, '10', null, XMLDB_NOTNULL, XMLDB_SEQUENCE, null);
+        $table->add_field('userid', XMLDB_TYPE_INTEGER, '10', null, XMLDB_NOTNULL, null, null);
+        $table->add_field('pdfannotatorid', XMLDB_TYPE_INTEGER, '10', null, XMLDB_NOTNULL, null, null);
+        $table->add_field('courseid', XMLDB_TYPE_INTEGER, '10', null, XMLDB_NOTNULL, null, null);
+        $table->add_field('cmid', XMLDB_TYPE_INTEGER, '10', null, XMLDB_NOTNULL, null, null);
+        $table->add_field('itemtype', XMLDB_TYPE_CHAR, '20', null, XMLDB_NOTNULL, null, null);
+        $table->add_field('payload', XMLDB_TYPE_TEXT, 'big', null, XMLDB_NOTNULL, null, null);
+        $table->add_field('timecreated', XMLDB_TYPE_INTEGER, '10', null, XMLDB_NOTNULL, null, null);
+
+        $table->add_key('primary', XMLDB_KEY_PRIMARY, ['id']);
+
+        $table->add_index('pdfann_user', XMLDB_INDEX_NOTUNIQUE, ['pdfannotatorid', 'userid']);
+
+        if (!$dbman->table_exists($table)) {
+            $dbman->create_table($table);
+        }
+
+        upgrade_mod_savepoint(true, 2026032810, 'pdfannotator');
+    }
+
     return true;
 
 }

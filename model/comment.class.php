@@ -433,79 +433,230 @@ class pdfannotator_comment {
 
     }
     /**
+     * Active comment ids under root (same annotation, isdeleted = 0), BFS.
+     *
+     * @param int $rootid
+     * @param int $annotationid
+     * @return int[]
+     */
+    protected static function get_active_subtree_comment_ids($rootid, $annotationid) {
+        global $DB;
+
+        $rootid = (int) $rootid;
+        $annotationid = (int) $annotationid;
+
+        $all = $DB->get_records_select(
+            'pdfannotator_comments',
+            'annotationid = ? AND isdeleted = 0',
+            [$annotationid],
+            'id ASC'
+        );
+        $byid = [];
+        foreach ($all as $c) {
+            $byid[(int) $c->id] = $c;
+        }
+        if (!isset($byid[$rootid])) {
+            return [$rootid];
+        }
+        $childbyparent = [];
+        foreach ($all as $c) {
+            $pid = (int) $c->parentid;
+            if ($pid <= 0) {
+                continue;
+            }
+            if (!isset($childbyparent[$pid])) {
+                $childbyparent[$pid] = [];
+            }
+            $childbyparent[$pid][] = (int) $c->id;
+        }
+        $ids = [];
+        $queue = [$rootid];
+        $seen = [];
+        while (!empty($queue)) {
+            $id = array_shift($queue);
+            if (isset($seen[$id])) {
+                continue;
+            }
+            $seen[$id] = true;
+            $ids[] = $id;
+            if (empty($childbyparent[$id])) {
+                continue;
+            }
+            foreach ($childbyparent[$id] as $ch) {
+                if (isset($byid[$ch])) {
+                    $queue[] = $ch;
+                }
+            }
+        }
+        return $ids;
+    }
+
+    /**
+     * @param \stdClass[] $allrecords keyed by comment id
+     * @param int $expectedauthor
+     * @return bool
+     */
+    protected static function subtree_all_authors_match(array $allrecords, $expectedauthor) {
+        $expectedauthor = (int) $expectedauthor;
+        foreach ($allrecords as $rec) {
+            if ((int) $rec->userid !== $expectedauthor) {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    /**
+     * Post-order traversal: leaves first (safe delete order).
+     *
+     * @param int $rootid
+     * @param \stdClass[] $allrecords
+     * @return int[]
+     */
+    protected static function get_subtree_postorder_ids($rootid, array $allrecords) {
+        $subtreeidset = array_fill_keys(array_map('intval', array_keys($allrecords)), true);
+        $childbyparent = [];
+        foreach ($allrecords as $cid => $rec) {
+            $pid = (int) $rec->parentid;
+            if ($pid > 0 && isset($subtreeidset[$pid])) {
+                if (!isset($childbyparent[$pid])) {
+                    $childbyparent[$pid] = [];
+                }
+                $childbyparent[$pid][] = (int) $cid;
+            }
+        }
+        return self::subtree_postorder_walk((int) $rootid, $childbyparent);
+    }
+
+    /**
+     * @param int $rootid
+     * @param array $childbyparent
+     * @return int[]
+     */
+    protected static function subtree_postorder_walk($rootid, array $childbyparent) {
+        $out = [];
+        if (!empty($childbyparent[$rootid])) {
+            foreach ($childbyparent[$rootid] as $ch) {
+                $out = array_merge($out, self::subtree_postorder_walk($ch, $childbyparent));
+            }
+        }
+        $out[] = (int) $rootid;
+        return $out;
+    }
+
+    /**
      * Deletes a comment.
      * If the comment is answered, it will be displayed as deleted comment.
+     * Does not remove the whole Area annotation from the trash action on a single post.
      */
     public static function delete_comment($commentid, $cmid) {
         global $DB, $USER;
-        $success = 0;
-        // Retrieve comment from db (return false if it doesn't exist).
-        $comment = $DB->get_record('pdfannotator_comments', array('id' => $commentid), '*', $strictness = IGNORE_MISSING);
 
+        $comment = $DB->get_record('pdfannotator_comments', array('id' => $commentid), '*', IGNORE_MISSING);
         if (!$comment) {
-            echo json_encode(['status' => 'error']);
-            return;
+            return ['status' => 'error', 'errorcode' => 'notfound'];
         }
+
         $context = context_module::instance($cmid);
-        // Check capabilities.
         if (!has_capability('mod/pdfannotator:deleteany', $context) &&
-                !(has_capability('mod/pdfannotator:deleteown', $context) &&($comment->userid == $USER->id))) {
-            echo json_encode(['status' => 'error']);
-            return;
+                !(has_capability('mod/pdfannotator:deleteown', $context) && ($comment->userid == $USER->id))) {
+            return [
+                'status' => 'error',
+                'errorcode' => 'nopermission',
+                'message' => get_string('nopermissions', 'error'),
+            ];
         }
 
-        // To delete or not to delete, that is the question.
         $annotationid = $comment->annotationid;
+        $candeleteany = has_capability('mod/pdfannotator:deleteany', $context);
 
-        $wasanswered = $DB->record_exists_select('pdfannotator_comments',
+        $hasactivesubs = $DB->record_exists_select(
+            'pdfannotator_comments',
             'annotationid = ? AND parentid = ? AND isdeleted = ?',
-            [$annotationid, $commentid, 0]);
+            [$annotationid, $commentid, 0]
+        );
 
         $tobedeletedaswell = [];
         $deleteannotation = 0;
+        $success = 0;
+        $wasanswered = false;
+        $recyclecomments = null;
 
-        if ($wasanswered) { // If the comment was answered, mark it as deleted for a special display.
-            $params = array("id" => $commentid, "isdeleted" => 1);
-            $success = $DB->update_record('pdfannotator_comments', $params, $bulk = false);
-        } else { // If not, just delete it.
-            // But first: Check if the predecessor was already marked as deleted, too and if so, delete it completely.
-            $sql = "SELECT id, isdeleted, isquestion from {pdfannotator_comments} "
-                    . "WHERE annotationid = ? AND timecreated < ? ORDER BY id DESC";
-            $params = array($annotationid, $comment->timecreated);
-            $predecessors = $DB->get_records_sql($sql, $params);
-
-            foreach ($predecessors as $predecessor) {
-                if ($predecessor->isdeleted != 0) {
-                    $workingfine = $DB->delete_records('pdfannotator_comments', array("id" => $predecessor->id));
-                    if ($workingfine != 0) {
-                        $tobedeletedaswell[] = $predecessor->id;
-                        if ($predecessor->isquestion) {
-                            pdfannotator_annotation::delete($annotationid, $cmid, true);
-                            $deleteannotation = $annotationid;
-                        }
+        if ($hasactivesubs) {
+            if ($candeleteany) {
+                // Moderation: soft-delete this node only (thread stays; same as previous wasanswered path).
+                $params = array('id' => $commentid, 'isdeleted' => 1);
+                $success = $DB->update_record('pdfannotator_comments', $params, false) ? 1 : 0;
+                $wasanswered = true;
+                if ($success == 1) {
+                    $DB->delete_records('pdfannotator_votes', array('commentid' => $commentid));
+                }
+            } else {
+                // Author without deleteany: may remove whole branch only if every node is by the root author.
+                $subtreeids = self::get_active_subtree_comment_ids((int) $commentid, (int) $annotationid);
+                $allrecords = [];
+                foreach ($subtreeids as $sid) {
+                    $rec = $DB->get_record('pdfannotator_comments', array('id' => $sid), '*', MUST_EXIST);
+                    $allrecords[(int) $sid] = $rec;
+                }
+                $rootauthor = (int) $allrecords[(int) $commentid]->userid;
+                if (!self::subtree_all_authors_match($allrecords, $rootauthor)) {
+                    return [
+                        'status' => 'error',
+                        'errorcode' => 'branchhasothers',
+                        'message' => get_string('errordeletebranchhasothers', 'pdfannotator'),
+                    ];
+                }
+                $rootid = (int) $commentid;
+                foreach ($subtreeids as $sid) {
+                    if ((int) $sid !== $rootid) {
+                        $tobedeletedaswell[] = (int) $sid;
                     }
-                } else {
-                    break;
+                }
+                $delorder = self::get_subtree_postorder_ids($rootid, $allrecords);
+                $recyclecomments = array_values($allrecords);
+                $transaction = $DB->start_delegated_transaction();
+                try {
+                    foreach ($delorder as $cid) {
+                        $DB->delete_records('pdfannotator_votes', array('commentid' => $cid));
+                        $DB->delete_records('pdfannotator_comments', array('id' => $cid));
+                    }
+                    $transaction->allow_commit();
+                    $success = 1;
+                    $wasanswered = false;
+                } catch (\Exception $e) {
+                    $transaction->rollback($e);
+                    return ['status' => 'error', 'errorcode' => 'deletefailed'];
                 }
             }
-
-            // If the comment is a question and has no answers, delete the annotion.
-            if ($comment->isquestion) {
-                pdfannotator_annotation::delete($annotationid, $cmid, true);
-                $deleteannotation = $annotationid;
+        } else {
+            // Leaf: remove comment only; never delete the whole annotation.
+            $wasanswered = false;
+            $recyclecomments = array($comment);
+            $success = $DB->delete_records('pdfannotator_comments', array('id' => $commentid)) ? 1 : 0;
+            if ($success == 1) {
+                $DB->delete_records('pdfannotator_votes', array('commentid' => $commentid));
             }
-
-            $success = $DB->delete_records('pdfannotator_comments', array("id" => $commentid));
         }
-        // Delete votes to the comment.
-        $DB->delete_records('pdfannotator_votes', array("commentid" => $commentid));
 
         if ($success == 1) {
-            return ['status' => 'success', 'wasanswered' => $wasanswered, 'followups' => $tobedeletedaswell,
-                'deleteannotation' => $deleteannotation, 'isquestion' => $comment->isquestion];
-        } else {
-            return ['status' => 'error'];
+            if (!$wasanswered && $recyclecomments !== null) {
+                try {
+                    $cmrec = get_coursemodule_from_id('pdfannotator', $cmid, 0, false, MUST_EXIST);
+                    \mod_pdfannotator\recycle_bin::snapshot_comment_deletion((int) $USER->id, $cmrec, $recyclecomments);
+                } catch (\Throwable $e) {
+                }
+            }
+            return [
+                'status' => 'success',
+                'wasanswered' => $wasanswered,
+                'followups' => $tobedeletedaswell,
+                'deleteannotation' => $deleteannotation,
+                'isquestion' => $comment->isquestion,
+            ];
         }
+
+        return ['status' => 'error', 'errorcode' => 'deletefailed'];
     }
 
     public static function update($commentid, $content, $editanypost, $context) {
@@ -640,12 +791,17 @@ class pdfannotator_comment {
             $comment->solved = $newsolved;
             $success = $DB->update_record('pdfannotator_comments', $comment);
             if ($success && $newsolved === 0) {
-                self::clear_answer_solved_for_annotation((int) $comment->annotationid);
+                self::clear_answer_solved_for_question_thread((int) $comment->annotationid, (int) $comment->id);
             }
             return (bool) $success;
         }
 
-        if ($posttype !== 'answer') {
+        $inferredpt = $posttype;
+        if ($inferredpt === '' && (int) $comment->isquestion === 0
+                && !empty($comment->parentid) && (int) $comment->parentid > 0) {
+            $inferredpt = 'answer';
+        }
+        if ($inferredpt !== 'answer') {
             return false;
         }
 
@@ -653,18 +809,93 @@ class pdfannotator_comment {
     }
 
     /**
-     * Clear "chosen solution" flag on all answers in an annotation.
+     * All comment ids strictly below $questionid in the same annotation (children, recursively).
      *
      * @param int $annotationid
+     * @param int $questionid
+     * @return int[]
      */
-    protected static function clear_answer_solved_for_annotation($annotationid) {
+    protected static function collect_thread_descendant_ids($annotationid, $questionid) {
         global $DB;
-        $DB->set_field_select('pdfannotator_comments', 'solved', 0,
-            'annotationid = ? AND posttype = ?', [$annotationid, 'answer']);
+        $rows = $DB->get_records_sql(
+            "SELECT id, parentid FROM {pdfannotator_comments} WHERE annotationid = ?",
+            [(int) $annotationid]
+        );
+        $children = [];
+        foreach ($rows as $r) {
+            $pid = !empty($r->parentid) ? (int) $r->parentid : 0;
+            if (!isset($children[$pid])) {
+                $children[$pid] = [];
+            }
+            $children[$pid][] = (int) $r->id;
+        }
+        $out = [];
+        $stack = [(int) $questionid];
+        while (!empty($stack)) {
+            $pid = (int) array_pop($stack);
+            if (empty($children[$pid])) {
+                continue;
+            }
+            foreach ($children[$pid] as $cid) {
+                $out[] = $cid;
+                $stack[] = $cid;
+            }
+        }
+        return $out;
     }
 
     /**
-     * Mark one answer as solution: question.solved set, other answers cleared, selected answer highlighted via solved id.
+     * Clear solved on answer-like rows in this question's subtree only (multi-Q per annotation safe).
+     *
+     * @param int $annotationid
+     * @param int $questionid
+     */
+    protected static function clear_answer_solved_for_question_thread($annotationid, $questionid) {
+        global $DB;
+        $desc = self::collect_thread_descendant_ids((int) $annotationid, (int) $questionid);
+        if (empty($desc)) {
+            return;
+        }
+        list($insql, $params) = $DB->get_in_or_equal($desc, SQL_PARAMS_QM);
+        $sql = "UPDATE {pdfannotator_comments} SET solved = 0 WHERE annotationid = ? AND id " . $insql
+            . " AND (posttype = 'answer' OR ((posttype IS NULL OR posttype = '')"
+            . " AND isquestion = 0 AND parentid IS NOT NULL AND parentid <> 0))";
+        array_unshift($params, (int) $annotationid);
+        $DB->execute($sql, $params);
+    }
+
+    /**
+     * Walk parentid chain from an answer until the thread question row.
+     *
+     * @param \stdClass $answer
+     * @return \stdClass|null
+     */
+    protected static function resolve_question_for_answer_comment($answer) {
+        global $DB;
+        $cur = $answer;
+        $guard = 0;
+        while ($cur && $guard++ < 150) {
+            if ((int) $cur->isquestion === 1) {
+                return $cur;
+            }
+            $pt = isset($cur->posttype) ? (string) $cur->posttype : '';
+            if ($pt === 'question') {
+                return $cur;
+            }
+            $pid = !empty($cur->parentid) ? (int) $cur->parentid : 0;
+            if ($pid <= 0) {
+                break;
+            }
+            $cur = $DB->get_record('pdfannotator_comments', ['id' => $pid]);
+            if (!$cur) {
+                break;
+            }
+        }
+        return null;
+    }
+
+    /**
+     * Mark one answer as solution: question.solved set, other answers in this Q-thread cleared.
      *
      * @param int $answerid
      * @param \context_module $context
@@ -674,22 +905,19 @@ class pdfannotator_comment {
         global $DB, $USER;
 
         $answer = $DB->get_record('pdfannotator_comments', ['id' => $answerid]);
-        if (!$answer || (($answer->posttype ?? '') !== 'answer')) {
+        if (!$answer) {
+            return false;
+        }
+        $apt = isset($answer->posttype) ? trim((string) $answer->posttype) : '';
+        if ($apt === '' && (int) $answer->isquestion === 0
+                && !empty($answer->parentid) && (int) $answer->parentid > 0) {
+            $apt = 'answer';
+        }
+        if ($apt !== 'answer') {
             return false;
         }
 
-        $annotationid = (int) $answer->annotationid;
-        $question = $DB->get_record_sql(
-            "SELECT * FROM {pdfannotator_comments} WHERE annotationid = ? AND isquestion = 1",
-            [$annotationid],
-            IGNORE_MULTIPLE
-        );
-        if (!$question) {
-            $question = $DB->get_record('pdfannotator_comments', [
-                'annotationid' => $annotationid,
-                'posttype' => 'question',
-            ], '*', IGNORE_MISSING);
-        }
+        $question = self::resolve_question_for_answer_comment($answer);
         if (!$question) {
             return false;
         }
@@ -702,7 +930,7 @@ class pdfannotator_comment {
 
         $transaction = $DB->start_delegated_transaction();
         try {
-            self::clear_answer_solved_for_annotation($annotationid);
+            self::clear_answer_solved_for_question_thread((int) $answer->annotationid, (int) $question->id);
 
             $qrow = $DB->get_record('pdfannotator_comments', ['id' => $question->id], '*', MUST_EXIST);
             $qrow->solved = (int) $USER->id;
@@ -713,7 +941,7 @@ class pdfannotator_comment {
             $DB->update_record('pdfannotator_comments', $arow);
 
             $transaction->allow_commit();
-        } catch (\Exception $e) {
+        } catch (\Throwable $e) {
             $transaction->rollback($e);
             return false;
         }

@@ -111,6 +111,14 @@ class pdfannotator_annotation {
 
         // Delete annotation.
         if ($deletionallowed[0] === true || $deleteanyway === true) {
+            global $USER;
+            if ($cmid && empty($deleteanyway)) {
+                try {
+                    $cmrec = get_coursemodule_from_id('pdfannotator', $cmid, 0, false, MUST_EXIST);
+                    \mod_pdfannotator\recycle_bin::snapshot_annotation_deletion((int) $USER->id, $cmrec, $annotation);
+                } catch (\Throwable $e) {
+                }
+            }
 
             // Delete all comments of this annotation.
             $comments = $DB->get_records('pdfannotator_comments', array("annotationid" => $annotationid));

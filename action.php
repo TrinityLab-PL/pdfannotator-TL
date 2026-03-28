@@ -33,6 +33,7 @@
 
 use mod_pdfannotator\output\comment;
 use mod_pdfannotator\output\printview;
+use mod_pdfannotator\recycle_bin;
 
 require_once('../../config.php');
 require_once('model/annotation.class.php');
@@ -76,7 +77,7 @@ function pdfannotator_debuglog_append($context, $tag, $payload) {
 ", FILE_APPEND | LOCK_EX);
 }
 
-$readonlyactions = array('read', 'readsingle', 'getInformation', 'getComments', 'getQuestions', 'getCommentsToPrint', 'searchComments');
+$readonlyactions = array('read', 'readsingle', 'getInformation', 'getComments', 'getQuestions', 'getCommentsToPrint', 'searchComments', 'listRecycle');
 if (!in_array($action, $readonlyactions, true)) {
     require_sesskey();
 }
@@ -362,6 +363,19 @@ if ($action === 'update') {
     } else {
         echo json_encode(['status' => 'error']);
     }
+}
+
+
+if ($action === 'listRecycle') {
+    global $USER;
+    $items = recycle_bin::list_for_user((int) $documentid, $context, (int) $USER->id);
+    echo json_encode(['items' => $items]);
+}
+
+if ($action === 'restoreRecycle') {
+    $entryid = required_param('entryId', PARAM_INT);
+    $data = recycle_bin::restore($entryid, (int) $documentid, $context);
+    echo json_encode($data);
 }
 
 /* * ****************************************** Delete an annotation ****************************************** */
