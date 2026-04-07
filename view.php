@@ -96,6 +96,13 @@ if (isset($pdfannotator->defaultfullscreen) && $pdfannotator->defaultfullscreen)
 $PAGE->requires->js('/mod/pdfannotator/fullscreen_enhanced.js?ver=00055', false);
 $PAGE->requires->css('/mod/pdfannotator/lib/shoelace/dist/themes/light.css');
 
+// Overview: body class for drawer inset CSS (must run before $OUTPUT->header()).
+$overviewpageactions = ['overview', 'overviewquestions', 'overviewanswers', 'overviewownposts', 'overviewreports'];
+$pdfannotatorpageaction = optional_param('action', 'view', PARAM_ALPHA);
+if (in_array($pdfannotatorpageaction, $overviewpageactions, true)) {
+    $PAGE->add_body_class('pdfannotator-overview');
+}
+
 // Display course name, navigation bar at the very top and "Dashboard->...->..." bar.
 echo $OUTPUT->header();
 

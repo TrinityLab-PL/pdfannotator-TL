@@ -2082,7 +2082,8 @@
             return;
         }
         list.innerHTML = results.map(function (item) {
-            var badge = item.isquestion ? 'Q' : 'A';
+            var pt = String(item.posttype || '').toLowerCase();
+            var badge = item.isquestion ? 'Q' : (pt === 'answer' ? 'A' : 'C');
             var page = Number(item.page) || 1;
             var plain = String(item.content || '').replace(/<[^>]+>/g, ' ').trim();
             return '<button type="button" class="tl-search-result-item"'

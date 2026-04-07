@@ -74,12 +74,12 @@ class questionstable extends overviewtable {
             $this->no_sorting('col6');
         }
         $this->define_columns($columns);
-        $this->column_style('col0', 'width', '30% !important'); // Question.
-        $this->column_style('col1', 'width', '19%'); // Who asked the question when.
+        $this->column_style('col0', 'width', '22% !important'); // Question.
+        $this->column_style('col1', 'width', '16.5%'); // Who asked the question when.
         $this->column_style('col2', 'width', '6%'); // How many people voted for the question.
         $this->column_style('col3', 'width', '6%'); // How many answers were given to it.
-        $this->column_style('col4', 'width', '19%'); // When was the last answer given.
-        $this->column_style('col5', 'width', '20%'); // In which annotator is the question located.
+        $this->column_style('col4', 'width', '19.2%'); // When was the last answer given.
+        $this->column_style('col5', 'width', '25.3%'); // In which annotator is the question located.
 
         $this->attributes['id'] = $this->id;
         $question = get_string('question', 'pdfannotator');

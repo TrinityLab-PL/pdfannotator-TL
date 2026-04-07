@@ -1022,6 +1022,14 @@ body {
 
 /******************************************** START: mainly for overview page *******************************************/
 
+/* Boost drawers: main column padding (theme uses 15px from 768px); use 2.2em in this activity. */
+@media (min-width: 768px) {
+    .path-mod-pdfannotator #page.drawers div[role="main"] {
+        padding-left: 2.2em;
+        padding-right: 2.2em;
+    }
+}
+
 /******************************** OPTION 4
 
 /*
@@ -1462,37 +1470,37 @@ table#mod-pdfannotator-questions {
 
 table#mod-pdfannotator-questions th.c0,
 table#mod-pdfannotator-questions td[id^="mod-pdfannotator-questions_r"][id$="_c0"] {
-    width: 40%;
+    width: 22%;
 }
 
 table#mod-pdfannotator-questions th.c1,
 table#mod-pdfannotator-questions td[id^="mod-pdfannotator-questions_r"][id$="_c1"] {
-    width: 15%;
+    width: 16.5%;
 }
 
 table#mod-pdfannotator-questions th.c2,
 table#mod-pdfannotator-questions td[id^="mod-pdfannotator-questions_r"][id$="_c2"] {
-    width: 7.5%;
+    width: 6%;
 }
 
 table#mod-pdfannotator-questions th.c3,
 table#mod-pdfannotator-questions td[id^="mod-pdfannotator-questions_r"][id$="_c3"] {
-    width: 7.5%;
+    width: 6%;
 }
 
 table#mod-pdfannotator-questions th.c4,
 table#mod-pdfannotator-questions td[id^="mod-pdfannotator-questions_r"][id$="_c4"] {
-    width: 10%;
+    width: 19.2%;
 }
 
 table#mod-pdfannotator-questions th.c5,
 table#mod-pdfannotator-questions td[id^="mod-pdfannotator-questions_r"][id$="_c5"] {
-    width: 10%;
+    width: 25.3%;
 }
 
 table#mod-pdfannotator-questions th.c6,
 table#mod-pdfannotator-questions td[id^="mod-pdfannotator-questions_r"][id$="_c6"] {
-    width: 8%;
+    width: 5%;
 }
 table#mod-pdfannotator-questions td[id^="mod-pdfannotator-questions_r"][id$="_c0"] a.more {
     white-space: normal;
