@@ -171,44 +171,63 @@
         return def || key;
     }
 
-    function appendSameQuestionVoteUi(article, item) {
+    function appendSameQuestionVoteUi(actionRow, item) {
         var isQ = item._posttype === 'question' || item.isquestion === 1 || item.isquestion === true;
         if (!isQ || !item.usevotes || item.isdeleted) {
             return;
         }
+        var slot = actionRow.querySelector('.tl-vote-slot');
+        if (!slot) {
+            return;
+        }
         var caps = state.capabilities || {};
         var uid = parseInt(state.userId, 10) || 0;
-        var wrap = document.createElement('div');
+        var wrap = document.createElement('span');
         wrap.className = 'tl-same-question-vote';
-        wrap.style.cssText = 'display:inline-flex;align-items:center;gap:6px;margin-right:8px;';
+        wrap.style.cssText = 'display:inline-flex;align-items:center;gap:2px;margin:0;vertical-align:middle;';
         var btn = document.createElement('button');
         btn.type = 'button';
-        btn.className = 'comment-like-a btn-link tl-comment-like';
+        btn.className = 'comment-like-a tl-comment-like';
+        btn.style.cssText = 'border:none;background:transparent;padding:0 1px;margin:0;box-shadow:none;outline:none;cursor:pointer;line-height:1;';
+        var icon = document.createElement('i');
+        icon.className = 'icon fa fa-thumbs-up fa-fw';
+        icon.setAttribute('aria-hidden', 'true');
+        btn.appendChild(icon);
         var countSpan = document.createElement('span');
         countSpan.className = 'tl-vote-count countVotes';
+        countSpan.style.cssText = 'margin:0;padding:0 0 0 1px;font-size:0.95em;';
         var votes = parseInt(item.votes, 10);
         if (isNaN(votes)) {
             votes = 0;
         }
         countSpan.textContent = String(votes);
         var own = parseInt(item.userid, 10) === uid;
-        var voted = item.isvoted === true || item.isvoted === 1 || item.isvoted === '1';
-        var canVote = !!caps.vote && !own && !voted;
+        var userVoted = item.isvoted === true || item.isvoted === 1 || item.isvoted === '1';
+        var canToggle = !!caps.vote && !own;
 
         var tipOwn = moodlePdfStr('likeOwnComment', 'Your own question');
-        var tipVoted = moodlePdfStr('likeQuestionForbidden', 'You already marked that you have the same question');
+        var tipRemove = moodlePdfStr('likeQuestionRemoveVote', 'Click to remove your vote');
         var tipVote = moodlePdfStr('likeQuestion', 'I have the same question');
         var countTip = String(votes) + ' ' + moodlePdfStr('likeCountQuestion', 'people have the same question');
 
-        btn.innerHTML = '<i class="icon fa fa-thumbs-up fa-fw" aria-hidden="true"></i>';
+        function applyLikeIconState() {
+            if (own || !caps.vote) {
+                icon.style.color = '#6a6a6a';
+                return;
+            }
+            icon.style.color = userVoted ? '#c4c4c4' : '#334155';
+        }
+
+        applyLikeIconState();
+
         if (own) {
             btn.setAttribute('data-tl-tooltip', tipOwn);
             btn.disabled = true;
-        } else if (voted) {
-            btn.setAttribute('data-tl-tooltip', tipVoted);
-            btn.disabled = true;
+            btn.style.cursor = 'default';
         } else if (!caps.vote) {
             btn.style.display = 'none';
+        } else if (userVoted) {
+            btn.setAttribute('data-tl-tooltip', tipRemove);
         } else {
             btn.setAttribute('data-tl-tooltip', tipVote);
         }
@@ -216,52 +235,58 @@
 
         wrap.appendChild(btn);
         wrap.appendChild(countSpan);
-        var metaTop = article.querySelector('.tl-comment-meta-top');
-        var metaEnd = article.querySelector('.tl-comment-meta-end');
-        if (metaTop && metaEnd) {
-            metaTop.insertBefore(wrap, metaEnd);
-        } else if (metaTop) {
-            metaTop.appendChild(wrap);
-        }
+        slot.appendChild(wrap);
 
         if (btn.style.display !== 'none') {
             bindTlToolbarTooltip(btn);
         }
         bindTlToolbarTooltip(countSpan);
 
-        if (canVote) {
-            btn.addEventListener('click', function () {
-                btn.disabled = true;
-                var cid = String(item.id || item.uuid || '');
-                ajax('voteComment', { commentid: cid })
-                    .then(function (data) {
-                        if (data && data.status === 'success') {
-                            var nv = data.numberVotes;
-                            votes = nv != null ? parseInt(nv, 10) : votes + 1;
-                            if (isNaN(votes)) {
-                                votes = 0;
-                            }
-                            countSpan.textContent = String(votes);
-                            countSpan.setAttribute(
-                                'data-tl-tooltip',
-                                String(votes) + ' ' + moodlePdfStr('likeCountQuestion', 'people have the same question')
-                            );
-                            btn.setAttribute('data-tl-tooltip', moodlePdfStr('likeQuestionForbidden', 'You already marked that you have the same question'));
-                        } else {
-                            btn.disabled = false;
-                            var msg = moodlePdfStr('error:voteComment', 'Vote failed');
-                            if (data && data.reason === 'vote_question_only') {
-                                msg = moodlePdfStr('error:votequestiononly', msg);
-                            }
-                            window.alert(msg);
-                        }
-                    })
-                    .catch(function () {
-                        btn.disabled = false;
-                        window.alert(moodlePdfStr('error:voteComment', 'Vote failed'));
-                    });
-            });
+        if (!canToggle) {
+            return;
         }
+
+        var pending = false;
+        btn.addEventListener('click', function () {
+            if (pending) {
+                return;
+            }
+            pending = true;
+            var cid = String(item.id || item.uuid || '');
+            var act = userVoted ? 'unvoteComment' : 'voteComment';
+            ajax(act, { commentid: cid })
+                .then(function (data) {
+                    if (data && data.status === 'success') {
+                        var nv = data.numberVotes;
+                        votes = nv != null ? parseInt(nv, 10) : votes;
+                        if (isNaN(votes)) {
+                            votes = 0;
+                        }
+                        userVoted = act === 'voteComment';
+                        countSpan.textContent = String(votes);
+                        countSpan.setAttribute(
+                            'data-tl-tooltip',
+                            String(votes) + ' ' + moodlePdfStr('likeCountQuestion', 'people have the same question')
+                        );
+                        btn.setAttribute('data-tl-tooltip', userVoted ? tipRemove : tipVote);
+                        applyLikeIconState();
+                    } else {
+                        var msg = moodlePdfStr('error:voteComment', 'Vote failed');
+                        if (data && data.reason === 'vote_question_only') {
+                            msg = moodlePdfStr('error:votequestiononly', msg);
+                        } else if (data && data.reason === 'unvote_failed') {
+                            msg = moodlePdfStr('error:voteComment', 'Could not remove vote');
+                        }
+                        window.alert(msg);
+                    }
+                })
+                .catch(function () {
+                    window.alert(moodlePdfStr('error:voteComment', 'Vote failed'));
+                })
+                .then(function () {
+                    pending = false;
+                });
+        });
     }
 
     function debugLog(tag, msg, extra) {
@@ -2822,6 +2847,7 @@
                 + '<option value="private">Private</option>'
                 + '<option value="protected">Protected</option>'
                 + '</select>'
+                + '<span class="tl-vote-slot"></span>'
                 + '<button type="button" class="tl-action-btn tl-action-add-comment">Add comment</button>'
                 + '<button type="button" class="tl-action-btn tl-action-reply">Reply</button>';
             return div;
@@ -2960,8 +2986,8 @@
                 }
             }
 
-            appendSameQuestionVoteUi(article, item);
             var actionRow = buildActionRow();
+            appendSameQuestionVoteUi(actionRow, item);
             article.appendChild(actionRow);
             bindActionRow(article, actionRow, nodeIdStr);
 
@@ -2993,8 +3019,8 @@
                 + '<div class="tl-comment-author"><strong>' + user + '</strong></div>'
                 + '<div class="tl-comment-body-wrap"><div class="tl-comment-body tl-comment-body-collapsible">' + body + '</div></div>';
 
-            appendSameQuestionVoteUi(article, root);
             var actionRow = buildActionRow();
+            appendSameQuestionVoteUi(actionRow, root);
             article.appendChild(actionRow);
             bindActionRow(article, actionRow, rootIdStr);
 

@@ -586,6 +586,35 @@ if ($action === 'voteComment') {
     }
 }
 
+/* * ****************************************** Remove vote (same-question) ****************************************** */
+
+if ($action === 'unvoteComment') {
+
+    require_capability('mod/pdfannotator:vote', $context);
+
+    global $DB;
+
+    $commentid = required_param('commentid', PARAM_INT);
+
+    $commentrow = $DB->get_record('pdfannotator_comments', array('id' => $commentid), 'id,isquestion,posttype');
+    if (!$commentrow) {
+        echo json_encode(['status' => 'error', 'reason' => 'notfound']);
+    } else {
+        $isquestionvote = ((int) $commentrow->isquestion === 1)
+            || (strtolower(trim($commentrow->posttype ?? '')) === 'question');
+        if (!$isquestionvote) {
+            echo json_encode(['status' => 'error', 'reason' => 'vote_question_only']);
+        } else {
+            $numbervotes = pdfannotator_comment::delete_vote($documentid, $commentid);
+            if ($numbervotes !== false) {
+                echo json_encode(['status' => 'success', 'numberVotes' => (int) $numbervotes]);
+            } else {
+                echo json_encode(['status' => 'error', 'reason' => 'unvote_failed']);
+            }
+        }
+    }
+}
+
 /* * ****************************************** Subscribe to a question  ****************************************** */
 
 if ($action === 'subscribeQuestion') {

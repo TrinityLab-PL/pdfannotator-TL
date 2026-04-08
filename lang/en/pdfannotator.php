@@ -525,3 +525,4 @@ $string['recycle_label_comment'] = 'Post(s) ({$a->count})';
 $string['zoom'] = 'zoom';
 $string['zoomin'] = 'zoom in';
 $string['zoomout'] = 'zoom out';
+$string['likeQuestionRemoveVote'] = 'Click to remove your vote';

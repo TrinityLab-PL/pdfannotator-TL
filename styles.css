@@ -3227,7 +3227,7 @@ body.tl-pdf-fullscreen #pdftoolbar {
     align-items: center;
     gap: 6px;
     margin-top: 8px;
-    flex-wrap: wrap;
+    flex-wrap: nowrap;
 }
 
 .path-mod-pdfannotator .tl-item-visibility {
@@ -3255,22 +3255,38 @@ body.tl-pdf-fullscreen #pdftoolbar {
     background: #f1f5f9;
 }
 
-/* TL_THREAD_ITEM_ACTIONS_V55: thread row — link-style; tight native select arrow; layout B grid */
+/* TL_THREAD_ITEM_ACTIONS: one row — Public left, Reply right (trash alignment), middle spaced */
 .path-mod-pdfannotator .tl-comment-item .tl-item-actions {
-    display: grid;
-    grid-template-columns: auto 1fr auto;
+    display: flex;
+    flex-wrap: nowrap;
     width: 100%;
     align-items: center;
-    column-gap: 12px;
-    flex-wrap: unset;
+    justify-content: space-between;
+    gap: 6px;
+    min-width: 0;
+    box-sizing: border-box;
 }
 
-.path-mod-pdfannotator .tl-comment-item .tl-item-actions .tl-action-add-comment {
-    justify-self: center;
+.path-mod-pdfannotator .tl-comment-item .tl-item-actions > .tl-item-visibility,
+.path-mod-pdfannotator .tl-comment-item .tl-item-actions > .tl-vote-slot,
+.path-mod-pdfannotator .tl-comment-item .tl-item-actions > .tl-action-add-comment,
+.path-mod-pdfannotator .tl-comment-item .tl-item-actions > .tl-action-reply {
+    flex: 0 1 auto;
+    min-width: 0;
 }
 
-.path-mod-pdfannotator .tl-comment-item .tl-item-actions .tl-action-reply {
-    justify-self: end;
+
+.path-mod-pdfannotator .tl-comment-item .tl-item-actions > .tl-vote-slot {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+.path-mod-pdfannotator .tl-comment-item .tl-item-actions > .tl-action-add-comment,
+.path-mod-pdfannotator .tl-comment-item .tl-item-actions > .tl-action-reply {
+    display: inline-flex;
+    justify-content: center;
+    align-items: center;
 }
 
 .path-mod-pdfannotator .tl-comment-item .tl-item-actions .tl-item-visibility {
@@ -3286,9 +3302,10 @@ body.tl-pdf-fullscreen #pdftoolbar {
     font-weight: 400;
     color: inherit;
     cursor: pointer;
-    width: max-content;
-    max-width: 100%;
-    justify-self: start;
+    width: auto;
+    max-width: 42%;
+    min-width: 0;
+    box-sizing: border-box;
 }
 
 .path-mod-pdfannotator .tl-comment-item .tl-item-actions .tl-item-visibility:hover {
@@ -3307,6 +3324,7 @@ body.tl-pdf-fullscreen #pdftoolbar {
     font-weight: 400;
     color: inherit;
     cursor: pointer;
+    white-space: nowrap;
 }
 
 .path-mod-pdfannotator .tl-comment-item .tl-item-actions .tl-action-btn:hover {
