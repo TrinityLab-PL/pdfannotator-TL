@@ -77,7 +77,7 @@ function pdfannotator_debuglog_append($context, $tag, $payload) {
 ", FILE_APPEND | LOCK_EX);
 }
 
-$readonlyactions = array('read', 'readsingle', 'getInformation', 'getComments', 'getQuestions', 'getCommentsToPrint', 'searchComments', 'listRecycle');
+$readonlyactions = array('read', 'readbatch', 'readsingle', 'getInformation', 'getComments', 'getQuestions', 'getCommentsToPrint', 'searchComments', 'listRecycle');
 if (!in_array($action, $readonlyactions, true)) {
     require_sesskey();
 }
@@ -113,65 +113,144 @@ if ($action === 'debugLog') {
 
 /* * ********************** Retrieve all annotations (of current page) from db for display *********************** */
 
-if ($action === 'read') {
-
-    global $DB, $USER;
-
-    $page = optional_param('page_Number', 1, PARAM_INT); // Default page number is 1.
+function pdfannotator_prepare_annotations_payload($records, $context, $userid, &$skippedvisibility) {
+    global $DB;
 
     $annotations = array();
-
-    $records = $DB->get_records('pdfannotator_annotations', array('pdfannotatorid' => $documentid, 'page' => $page));
-
-    $tldbg = optional_param('tl_dbg', 0, PARAM_INT);
-    if ($tldbg) {
-        pdfannotator_debuglog_append($context, 'read_pre', array(
-            'documentid' => $documentid,
-            'page' => $page,
-            'records' => is_array($records) ? count($records) : 0,
-            'skipped_visibility' => $skippedvisibility,
-            'ua' => isset($_SERVER['HTTP_USER_AGENT']) ? $_SERVER['HTTP_USER_AGENT'] : ''
-        ));
-    }
-
-
-    $skippedvisibility = 0;
+    $recordsbyannotation = array();
+    $annotationids = array();
 
     foreach ($records as $record) {
+        $rid = (int)$record->id;
+        $recordsbyannotation[$rid] = $record;
+        $annotationids[] = $rid;
+    }
 
-        $comment = $DB->get_record('pdfannotator_comments', array('annotationid' => $record->id, 'isquestion' => 1));
+    $questionbyannotation = array();
+    if (!empty($annotationids)) {
+        list($insql, $inparams) = $DB->get_in_or_equal($annotationids, SQL_PARAMS_NAMED);
+        $questions = $DB->get_records_select(
+            'pdfannotator_comments',
+            "annotationid $insql AND isquestion = 1",
+            $inparams,
+            '',
+            'id,annotationid,visibility,userid,isquestion'
+        );
+        foreach ($questions as $question) {
+            $aid = (int)$question->annotationid;
+            if (!isset($questionbyannotation[$aid])) {
+                $questionbyannotation[$aid] = $question;
+            }
+        }
+    }
+
+    foreach ($recordsbyannotation as $record) {
+        $rid = (int)$record->id;
+        $comment = isset($questionbyannotation[$rid]) ? $questionbyannotation[$rid] : null;
         if ($comment && !pdfannotator_can_see_comment($comment, $context)) {
             $skippedvisibility += 1;
             continue;
         }
 
-        $entry = json_decode($record->data); // StdClass Object containing data that is specific to the respective annotation type.
-        // Add general annotation data.
+        $entry = json_decode($record->data);
+        if (!$entry) {
+            continue;
+        }
+
         $entry->type = pdfannotator_get_annotationtype_name($record->annotationtypeid);
-        // The following 3 lines can be removed after deletion of the original annotation tables.
         if ($entry->type == 'pin') {
             $entry->type = 'point';
         }
         $entry->class = "Annotation";
-        $entry->page = $page;
+        $entry->page = (int)$record->page;
         $entry->uuid = $record->id;
-
-        $entry->owner = $record->userid == $USER->id;
-
+        $entry->owner = ((int)$record->userid === (int)$userid);
         $annotations[] = $entry;
     }
 
-    
+    return $annotations;
+}
+
+if ($action === 'read') {
+    global $DB, $USER;
+
+    $page = optional_param('page_Number', 1, PARAM_INT);
+    $records = $DB->get_records('pdfannotator_annotations', array('pdfannotatorid' => $documentid, 'page' => $page));
+
+    $skippedvisibility = 0;
+    $annotations = pdfannotator_prepare_annotations_payload($records, $context, $USER->id, $skippedvisibility);
+
+    $tldbg = optional_param('tl_dbg', 0, PARAM_INT);
     if (!empty($tldbg)) {
         pdfannotator_debuglog_append($context, 'read_post', array(
             'documentid' => $documentid,
             'page' => $page,
-            'annotations' => is_array($annotations) ? count($annotations) : 0
+            'annotations' => is_array($annotations) ? count($annotations) : 0,
+            'skipped_visibility' => $skippedvisibility
         ));
     }
-$data = array('documentId' => $documentid, 'pageNumber' => $page, 'annotations' => $annotations);
+
+    $data = array('documentId' => $documentid, 'pageNumber' => $page, 'annotations' => $annotations);
     echo json_encode($data);
 }
+
+if ($action === 'readbatch') {
+    global $DB, $USER;
+
+    $pagesraw = optional_param('pages', '', PARAM_RAW_TRIMMED);
+    $pages = array();
+    if ($pagesraw !== '') {
+        $decoded = json_decode($pagesraw, true);
+        if (is_array($decoded)) {
+            foreach ($decoded as $value) {
+                $pagevalue = (int)$value;
+                if ($pagevalue > 0) {
+                    $pages[$pagevalue] = $pagevalue;
+                }
+            }
+        }
+    }
+
+    if (empty($pages)) {
+        echo json_encode(array('documentId' => $documentid, 'pages' => array()));
+        return;
+    }
+
+    $pages = array_values($pages);
+    sort($pages);
+
+    list($insql, $inparams) = $DB->get_in_or_equal($pages, SQL_PARAMS_NAMED);
+    $params = array_merge(array('pdfannotatorid' => $documentid), $inparams);
+    $records = $DB->get_records_select(
+        'pdfannotator_annotations',
+        "pdfannotatorid = :pdfannotatorid AND page $insql",
+        $params,
+        'page ASC, id ASC'
+    );
+
+    $skippedvisibility = 0;
+    $annotations = pdfannotator_prepare_annotations_payload($records, $context, $USER->id, $skippedvisibility);
+
+    $grouped = array();
+    foreach ($pages as $page) {
+        $grouped[(string)$page] = array();
+    }
+    foreach ($annotations as $entry) {
+        $key = (string)((int)$entry->page);
+        if (!array_key_exists($key, $grouped)) {
+            $grouped[$key] = array();
+        }
+        $grouped[$key][] = $entry;
+    }
+
+    echo json_encode(array(
+        'documentId' => $documentid,
+        'pages' => $grouped,
+        'skipped_visibility' => $skippedvisibility
+    ));
+}
+
+/* * **************************** Select a single annotation from db for shifting ********************************** */
 
 /* * **************************** Select a single annotation from db for shifting ********************************** */
 
