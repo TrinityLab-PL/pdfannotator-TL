@@ -3435,3 +3435,112 @@ body.tl-pdf-fullscreen #pdftoolbar {
     margin-left: auto;
     min-width: 0;
 }
+
+
+/* TL_LAYOUT_OVERRIDE_V3 — flex PDF + comments column; CSS-first override (load order: last wins) */
+.path-mod-pdfannotator {
+    --tl-comment-panel-width: clamp(320px, 24vw, 440px);
+}
+
+.path-mod-pdfannotator #body-wrapper {
+    display: flex !important;
+    flex-direction: row !important;
+    flex-wrap: nowrap !important;
+    align-items: stretch !important;
+    width: 100% !important;
+    max-width: 100% !important;
+}
+
+.path-mod-pdfannotator #content-wrapper {
+    flex: 1 1 0% !important;
+    min-width: 0 !important;
+    max-width: none !important;
+    width: auto !important;
+    padding-right: 0 !important;
+    box-sizing: border-box !important;
+    display: block !important;
+    overflow-x: hidden !important;
+    overflow-y: hidden !important;
+}
+
+.path-mod-pdfannotator #comment-wrapper {
+    position: static !important;
+    right: auto !important;
+    top: auto !important;
+    flex: 0 0 var(--tl-comment-panel-width) !important;
+    width: var(--tl-comment-panel-width) !important;
+    max-width: var(--tl-comment-panel-width) !important;
+    min-width: 0 !important;
+    height: auto !important;
+    align-self: stretch !important;
+    z-index: auto !important;
+    overflow-x: hidden !important;
+    overflow-y: auto !important;
+    margin-top: 0 !important;
+}
+
+.path-mod-pdfannotator #viewer {
+    width: 100% !important;
+    max-width: 100% !important;
+    padding-right: 0 !important;
+    box-sizing: border-box !important;
+}
+
+.path-mod-pdfannotator #body-wrapper:has(#comment-wrapper.tl-comments-hidden) #content-wrapper {
+    flex: 1 1 100% !important;
+}
+
+body.tl-pdf-fullscreen.path-mod-pdfannotator #pdfannotator_index {
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: stretch !important;
+    overflow: hidden !important;
+}
+
+body.tl-pdf-fullscreen.path-mod-pdfannotator #pdfannotator_index > .row:first-of-type {
+    flex: 0 0 auto !important;
+}
+
+body.tl-pdf-fullscreen.path-mod-pdfannotator #body-wrapper {
+    flex: 1 1 auto !important;
+    min-height: 0 !important;
+    overflow: hidden !important;
+}
+
+body.tl-pdf-fullscreen.path-mod-pdfannotator #content-wrapper {
+    height: 100% !important;
+    min-height: 0 !important;
+}
+
+body.tl-pdf-fullscreen.path-mod-pdfannotator #comment-wrapper {
+    position: static !important;
+    right: auto !important;
+    top: auto !important;
+    flex: 0 0 var(--tl-comment-panel-width) !important;
+    width: var(--tl-comment-panel-width) !important;
+    max-width: var(--tl-comment-panel-width) !important;
+    min-width: 0 !important;
+    height: 100% !important;
+    align-self: stretch !important;
+    z-index: auto !important;
+    overflow-x: hidden !important;
+    overflow-y: auto !important;
+
+}
+
+body.tl-pdf-fullscreen.path-mod-pdfannotator #viewer {
+    width: 100% !important;
+    max-width: 100% !important;
+}
+
+@media (max-width: 991.98px) {
+    .path-mod-pdfannotator #body-wrapper {
+        flex-direction: column !important;
+    }
+    .path-mod-pdfannotator #comment-wrapper {
+        flex: 1 1 auto !important;
+        width: 100% !important;
+        max-width: 100% !important;
+    }
+}
+
