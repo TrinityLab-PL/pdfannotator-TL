@@ -3798,7 +3798,8 @@ body.tl-pdf-fullscreen #pdfannotator_index.tl-layout-v4 #comment-wrapper {
     border-radius: 3px 3px 0 0 !important;
 }
 
-/* TL_ZOOM_PAN: zoom > 100% — horizontal scroll + LMB drag pan (v00054) */
+/* TL_ZOOM_PAN: zoom > 100% — horizontal scroll + LMB drag pan (v00054)
+   Scrollport border-radius: overflow-x:auto on #viewer clips children to a square viewport; match TL_PAGE_COMMENT_RADIUS. */
 body:not(.tl-pdf-fullscreen) #viewer.tl-zoom-pan {
     overflow-x: auto !important;
 }
@@ -3808,5 +3809,16 @@ body.tl-pdf-fullscreen #pdfannotator_index.tl-layout-v4 #viewer.tl-zoom-pan {
 body.tl-pdf-fullscreen #pdfannotator_index:not(.tl-layout-v4) #viewer.tl-zoom-pan {
     overflow-x: auto !important;
     overflow-y: auto !important;
+}
+
+#pdfannotator_index.tl-layout-v4 #viewer.tl-zoom-pan,
+#pdfannotator_index:not(.tl-layout-v4) #viewer.tl-zoom-pan {
+    border-radius: 3px !important;
+}
+
+#pdfannotator_index.tl-layout-v4 #viewer.tl-zoom-pan .page,
+body.tl-pdf-fullscreen #pdfannotator_index.tl-layout-v4 #viewer.tl-zoom-pan .page {
+    border-radius: 3px !important;
+    overflow: hidden !important;
 }
 
