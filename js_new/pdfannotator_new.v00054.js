@@ -379,7 +379,8 @@
             branch = "t100";
         }
         var dpr = window.devicePixelRatio || 1;
-        return String(s) + "|" + String(theater) + "|" + branch + "|" + String(dpr);
+        var fitKey = Number(state.fitScale || 1).toFixed(4);
+        return String(s) + "|" + String(theater) + "|" + branch + "|" + String(dpr) + "|" + fitKey;
     }
 
     function isPageRenderedForCurrentSignature(pageNumber) {
@@ -1010,10 +1011,12 @@
             if (!state.pdf) {
                 return;
             }
+            var ensureRasterRefresh = opts.ensureRasterRefresh !== false;
             var viewer = viewerEl();
             var saved = viewer ? buildSavedPosition(getCurrentPage(), viewer.scrollTop) : null;
             updateEffectiveScale();
             syncZoomUiState();
+            var sigAfterFirst = computePageRenderSignature();
             if (saved) {
                 state.restorePositionPending = {
                     page: saved.page,
@@ -1029,12 +1032,30 @@
                     scale: state.scale
                 };
             }
+            function finishTheatreSoftReflow() {
+                if (!state.pdf) {
+                    return;
+                }
+                updateEffectiveScale();
+                syncZoomUiState();
+                var sigAfterSettle = computePageRenderSignature();
+                if (sigAfterFirst !== sigAfterSettle || ensureRasterRefresh) {
+                    scheduleRenderWindowUpdate(false);
+                }
+            }
             requestAnimationFrame(function () {
                 requestAnimationFrame(function () {
                     restoreScrollAfterTheatreLayoutIfPossible();
                     if (state.restorePositionPending) {
                         requestAnimationFrame(function () {
                             restoreScrollAfterTheatreLayoutIfPossible();
+                            requestAnimationFrame(function () {
+                                finishTheatreSoftReflow();
+                            });
+                        });
+                    } else {
+                        requestAnimationFrame(function () {
+                            finishTheatreSoftReflow();
                         });
                     }
                 });
