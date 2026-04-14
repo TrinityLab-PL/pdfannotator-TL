@@ -3565,9 +3565,6 @@ body.tl-pdf-fullscreen.path-mod-pdfannotator #viewer {
 #pdfannotator_index.tl-layout-v4 {
     --tl-v4-comment-width: clamp(320px, 24vw, 440px);
     --tl-v4-column-gap: 12px;
-    --tl-v4-pdf-sb-gutter: 10px;
-    --tl-v4-pdf-sb-track: rgba(15, 23, 42, 0.06);
-    --tl-v4-pdf-sb-thumb: rgba(15, 23, 42, 0.45);
 }
 
 #pdfannotator_index.tl-layout-v4 #body-wrapper {
@@ -3589,7 +3586,6 @@ body.tl-pdf-fullscreen.path-mod-pdfannotator #viewer {
     display: block !important;
     overflow-x: hidden !important;
     overflow-y: hidden !important;
-    border-radius: 3px !important;
 }
 
 /* Normal view v4: left gutter for H5P icons (~4–5vw); theatre unchanged */
@@ -3601,30 +3597,8 @@ body:not(.tl-pdf-fullscreen) #pdfannotator_index.tl-layout-v4 #content-wrapper {
     width: 100% !important;
     max-width: 100% !important;
     margin: 0 !important;
-    padding-right: var(--tl-v4-pdf-sb-gutter) !important;
+    padding-right: 0 !important;
     box-sizing: border-box !important;
-    scrollbar-width: thin !important;
-    scrollbar-color: var(--tl-v4-pdf-sb-thumb) var(--tl-v4-pdf-sb-track) !important;
-    scrollbar-gutter: stable !important;
-}
-
-/* TL_V4_NATIVE_THIN_SCROLLBAR — same native styling normal + theatre (no JS; theatre needs unhide below) */
-#pdfannotator_index.tl-layout-v4 #viewer::-webkit-scrollbar {
-    width: 6px !important;
-    -webkit-appearance: none !important;
-    appearance: none !important;
-}
-
-#pdfannotator_index.tl-layout-v4 #viewer::-webkit-scrollbar-track {
-    background: var(--tl-v4-pdf-sb-track) !important;
-    border-radius: 999px !important;
-}
-
-#pdfannotator_index.tl-layout-v4 #viewer::-webkit-scrollbar-thumb {
-    background: var(--tl-v4-pdf-sb-thumb) !important;
-    border-radius: 999px !important;
-    border: 2px solid transparent !important;
-    background-clip: padding-box !important;
 }
 
 /* v4 normal: cienki pasek jak w theatre (jasne tło kolumny PDF) */
@@ -3732,9 +3706,6 @@ body.tl-pdf-fullscreen #pdfannotator_index.tl-layout-v4 #body-wrapper {
 body.tl-pdf-fullscreen #pdfannotator_index.tl-layout-v4 #content-wrapper {
     height: 100% !important;
     min-height: 0 !important;
-    border-radius: 3px 3px 0 0 !important;
-    overflow: hidden !important;
-    background: #ffffff !important;
 }
 
 body.tl-pdf-fullscreen #pdfannotator_index.tl-layout-v4 #viewer {
@@ -3742,16 +3713,15 @@ body.tl-pdf-fullscreen #pdfannotator_index.tl-layout-v4 #viewer {
     max-width: 100% !important;
     height: 100% !important;
     margin: 0 !important;
-    padding-right: var(--tl-v4-pdf-sb-gutter) !important;
-    box-sizing: border-box !important;
+    padding-right: 0 !important;
     overflow-y: auto !important;
     overflow-x: hidden !important;
     scrollbar-width: thin !important;
-    scrollbar-color: var(--tl-v4-pdf-sb-thumb) var(--tl-v4-pdf-sb-track) !important;
+    scrollbar-color: rgba(255, 255, 255, 0.48) rgba(255, 255, 255, 0.12) !important;
     -ms-overflow-style: auto !important;
 }
 
-/* Legacy fullscreen rules hide all #viewer scrollbars — restore WebKit bar for v4 theatre */
+/* v4 theatre: WebKit scrollbar — jasny na ciemnym tle; specyficzność > global hide */
 body.tl-pdf-fullscreen #pdfannotator_index.tl-layout-v4 #viewer::-webkit-scrollbar {
     display: block !important;
     width: 6px !important;
@@ -3760,14 +3730,12 @@ body.tl-pdf-fullscreen #pdfannotator_index.tl-layout-v4 #viewer::-webkit-scrollb
 }
 
 body.tl-pdf-fullscreen #pdfannotator_index.tl-layout-v4 #viewer::-webkit-scrollbar-track {
-    background: var(--tl-v4-pdf-sb-track) !important;
-
+    background: rgba(255, 255, 255, 0.12) !important;
     border-radius: 999px !important;
 }
 
 body.tl-pdf-fullscreen #pdfannotator_index.tl-layout-v4 #viewer::-webkit-scrollbar-thumb {
-    background: var(--tl-v4-pdf-sb-thumb) !important;
-
+    background: rgba(255, 255, 255, 0.45) !important;
     border-radius: 999px !important;
     border: 2px solid transparent !important;
     background-clip: padding-box !important;
@@ -3809,11 +3777,6 @@ body.tl-pdf-fullscreen #pdfannotator_index.tl-layout-v4.zoom-200 #content-wrappe
 body.tl-pdf-fullscreen #pdfannotator_index.tl-layout-v4 #viewer,
 body.tl-pdf-fullscreen #pdfannotator_index.tl-layout-v4 #viewer .page {
     transition: none !important;
-}
-
-/* Re-assert fixed thin scrollbar width after transition:none on #viewer */
-#pdfannotator_index.tl-layout-v4 #viewer::-webkit-scrollbar {
-    width: 6px !important;
 }
 
 /* TL_PAGE_COMMENT_RADIUS: subtle rounded corners (normal + theatre), tl-layout-v4 only */
