@@ -5094,6 +5094,13 @@ function fitTextboxAroundContent(annotationData) {
 
         pageState.annotationLayer.add(group);
         pageState.annotationsById[String(stableAnnoKey != null ? stableAnnoKey : (annotation.uuid != null ? annotation.uuid : (annotation.id || '')))] = group;
+        var sidFinal = getStableAnnotationIdForGroup(group);
+        if (sidFinal !== '') {
+            var curAid = group.getAttr('annotationId');
+            if (curAid == null || normalizeAnnotationIdCandidate(curAid) === '' || !annotationIdsMatch(curAid, sidFinal)) {
+                group.setAttr('annotationId', sidFinal);
+            }
+        }
         ensureCommentBadgeForAnnotation(pageNumber, group);
         return group;
     }
@@ -5301,6 +5308,7 @@ function fitTextboxAroundContent(annotationData) {
                 syncCommentBadgeForGroup(ps.annotationsById[aid]);
             });
         });
+        syncOrphanCommentBadgesForSelection();
     }
 
     function findAnnotationGroupById(idStr) {
@@ -5387,20 +5395,53 @@ function fitTextboxAroundContent(annotationData) {
         });
     }
 
+    function normalizeAnnotationIdCandidate(v) {
+        if (v == null) {
+            return '';
+        }
+        return String(v).trim();
+    }
+
+    function annotationIdsMatch(a, b) {
+        var sa = normalizeAnnotationIdCandidate(a);
+        var sb = normalizeAnnotationIdCandidate(b);
+        if (!sa || !sb) {
+            return false;
+        }
+        if (sa === sb) {
+            return true;
+        }
+        var na = parseInt(sa, 10);
+        var nb = parseInt(sb, 10);
+        if (!isNaN(na) && !isNaN(nb) && na === nb) {
+            return true;
+        }
+        return false;
+    }
+
     function getStableAnnotationIdForGroup(group) {
         if (!group || !group.getAttr) {
             return '';
         }
         var raw = group.getAttr('annotationId');
-        if (raw != null && String(raw) !== '') {
-            return String(raw);
+        var s = normalizeAnnotationIdCandidate(raw);
+        if (s !== '') {
+            return s;
         }
         var ad = group.getAttr('annotationData') || {};
-        if (ad.uuid != null && String(ad.uuid) !== '') {
-            return String(ad.uuid);
-        }
-        if (ad.id != null && String(ad.id) !== '') {
-            return String(ad.id);
+        var candidates = [
+            ad.uuid,
+            ad.id,
+            ad.annotationid,
+            ad.annotationId,
+            ad.annotation_id
+        ];
+        var i;
+        for (i = 0; i < candidates.length; i++) {
+            s = normalizeAnnotationIdCandidate(candidates[i]);
+            if (s !== '') {
+                return s;
+            }
         }
         return '';
     }
@@ -5412,9 +5453,14 @@ function fitTextboxAroundContent(annotationData) {
         var el = group.getAttr('commentBadgeEl');
         var has = !!group.getAttr('hasComments');
         var aid = getStableAnnotationIdForGroup(group);
+        if (el && aid) {
+            if (!el.getAttribute('data-tl-annotation-id')) {
+                el.setAttribute('data-tl-annotation-id', aid);
+            }
+        }
         var selected = state.activeAnnotation && (
             state.activeAnnotation.group === group ||
-            String(state.activeAnnotation.annotationId || '') === aid
+            annotationIdsMatch(state.activeAnnotation.annotationId, aid)
         );
         if (!has) {
             if (el) {
@@ -5431,6 +5477,35 @@ function fitTextboxAroundContent(annotationData) {
             el.style.display = '';
             updateCommentBadgePosition(group);
         }
+    }
+
+    function syncOrphanCommentBadgesForSelection() {
+        var active = state.activeAnnotation;
+        var activeSid = '';
+        if (active) {
+            activeSid = normalizeAnnotationIdCandidate(getStableAnnotationIdForGroup(active.group));
+            if (!activeSid) {
+                activeSid = normalizeAnnotationIdCandidate(active.annotationId);
+            }
+        }
+        Object.keys(state.pages || {}).forEach(function (k) {
+            var pn = parseInt(k, 10);
+            var pageEl = viewerEl().querySelector('.page[data-page-number="' + pn + '"]');
+            if (!pageEl) {
+                return;
+            }
+            var badges = pageEl.querySelectorAll('.tl-annotation-comment-badge');
+            var bi;
+            for (bi = 0; bi < badges.length; bi++) {
+                var badge = badges[bi];
+                var bid = normalizeAnnotationIdCandidate(badge.getAttribute('data-tl-annotation-id'));
+                if (activeSid !== '' && bid !== '' && annotationIdsMatch(bid, activeSid)) {
+                    badge.style.display = 'none';
+                } else if (bid !== '') {
+                    badge.style.display = '';
+                }
+            }
+        });
     }
 
     function ensureCommentBadgeForAnnotation(pageNumber, group) {
@@ -5460,6 +5535,10 @@ function fitTextboxAroundContent(annotationData) {
         });
         pageEl.appendChild(badge);
         group.setAttr('commentBadgeEl', badge);
+        var sidBadge = getStableAnnotationIdForGroup(group);
+        if (sidBadge) {
+            badge.setAttribute('data-tl-annotation-id', sidBadge);
+        }
         syncCommentBadgeForGroup(group);
     }
 
