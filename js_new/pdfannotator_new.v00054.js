@@ -4338,6 +4338,21 @@
         }
     }
 
+    function textboxUnscaledXAlignEditorText(editor, fontSizeUnscaled, scale) {
+        var s = scale || 1;
+        var fsPx = Math.max(10, Math.round(fontSizeUnscaled * s));
+        var padLpx = Math.round(0.4 * fsPx);
+        var edPad = 0;
+        try {
+            edPad = parseFloat(window.getComputedStyle(editor).paddingLeft) || 0;
+        } catch (e1) {
+            edPad = Math.round(0.4 * fsPx);
+        }
+        var textLeftPx = (editor.offsetLeft || 0) + edPad;
+        var boxLeftPx = textLeftPx - padLpx;
+        return boxLeftPx / s;
+    }
+
     function applyTextboxLabelLayout(pageNumber, labelEl, annotation, scale) {
         if (!labelEl || !annotation) { return; }
         var s = scale || state.scale || 1;
@@ -4348,7 +4363,7 @@
         var fontSizePx = Math.max(10, Math.round((annotation.size || state.textSize || 14) * s));
         var padX = Math.round(0.4 * fontSizePx);
         var padY = Math.round(0.4 * fontSizePx);
-        var padRight = padX + Math.round(fontSizePx * 0.4);
+        var padRight = padX;
 
         labelEl.style.position = 'absolute';
         labelEl.style.left = boxX + 'px';
@@ -4366,11 +4381,10 @@
         labelEl.style.overflow = 'hidden';
         labelEl.style.whiteSpace = 'pre';
         labelEl.style.wordBreak = 'normal';
-        var _isSingleLine = (annotation.content || '').split('\n').length === 1;
         labelEl.style.display = 'flex';
-        labelEl.style.alignItems = _isSingleLine ? 'center' : 'flex-start';
-        labelEl.style.justifyContent = _isSingleLine ? 'center' : 'flex-start';
-        labelEl.style.textAlign = _isSingleLine ? 'center' : 'left';
+        labelEl.style.alignItems = 'flex-start';
+        labelEl.style.justifyContent = 'flex-start';
+        labelEl.style.textAlign = 'left';
     }
 
 function fitTextboxAroundContent(annotationData) {
@@ -4404,7 +4418,7 @@ function fitTextboxAroundContent(annotationData) {
         var lineHeight = fontSize * 1.25;
         var textHeight = Math.max(lineHeight, lines.length * lineHeight);
         var paddingLeft = Math.round(0.4 * fontSize);
-        var paddingRight = paddingLeft + Math.round(0.4 * fontSize);
+        var paddingRight = paddingLeft;
         var paddingY = Math.round(0.4 * fontSize);
 
         var newWidth = Math.max(40, Math.ceil(maxWidth + paddingLeft + paddingRight + 4));
@@ -4541,22 +4555,21 @@ function fitTextboxAroundContent(annotationData) {
             annotationData.font = editorFontFamily;
             var _anchorX = editor.offsetLeft / (state.scale || 1);
             var _anchorY = editor.offsetTop / (state.scale || 1);
-            var _anchorW = editor.offsetWidth / (state.scale || 1);
+            var scale = state.scale || 1;
             fitTextboxAroundContent(annotationData);
             var _tbLines = (annotationData.content || '').split('\n').length;
             if (_tbLines === 1) {
-                annotationData.x = _anchorX + (_anchorW - annotationData.width) / 2;
+                annotationData.x = textboxUnscaledXAlignEditorText(editor, editorFontSize, scale);
             } else {
                 annotationData.x = _anchorX;
             }
             annotationData.y = _anchorY;
-            var scale = state.scale || 1;
             var wrappedH = annotationData.height;
             (function () {
                 var wrapEl = document.createElement('div');
                 wrapEl.setAttribute('aria-hidden', 'true');
                 wrapEl.style.cssText = 'position:absolute;left:-9999px;top:0;visibility:hidden;white-space:pre-wrap;word-wrap:break-word;margin:0;border:none;pointer-events:none;padding:6px;box-sizing:border-box;';
-                wrapEl.style.width = editor.offsetWidth + 'px';
+                wrapEl.style.width = ((_tbLines === 1) ? Math.ceil(annotationData.width * scale) : editor.offsetWidth) + 'px';
                 wrapEl.style.fontSize = displayFontSize + 'px';
                 wrapEl.style.fontFamily = editorFontFamily + ', sans-serif';
                 wrapEl.style.lineHeight = '1.25';
@@ -4751,12 +4764,13 @@ function fitTextboxAroundContent(annotationData) {
             fitTextboxAroundContent(measure);
 
             var scale = state.scale || 1;
+            var _tbLines2 = content.split('\n').length;
             var wrappedHeightUnscaled = measure.height;
             (function () {
                 var wrapEl = document.createElement('div');
                 wrapEl.setAttribute('aria-hidden', 'true');
                 wrapEl.style.cssText = 'position:absolute;left:-9999px;top:0;visibility:hidden;white-space:pre-wrap;word-wrap:break-word;margin:0;border:none;pointer-events:none;padding:6px;box-sizing:border-box;';
-                wrapEl.style.width = editor.offsetWidth + 'px';
+                wrapEl.style.width = ((_tbLines2 === 1) ? Math.ceil(measure.width * scale) : editor.offsetWidth) + 'px';
                 wrapEl.style.fontSize = displayFontSize + 'px';
                 wrapEl.style.fontFamily = editorFontFamily + ', sans-serif';
                 wrapEl.style.lineHeight = '1.25';
@@ -4765,15 +4779,15 @@ function fitTextboxAroundContent(annotationData) {
                 wrappedHeightUnscaled = wrapEl.offsetHeight / scale;
                 if (wrapEl.parentNode) { wrapEl.parentNode.removeChild(wrapEl); }
             })();
-            var _tbLines2 = content.split('\n').length;
-            var _tbAnchorX = _tbLines2 === 1
-                ? unscaledBoxX + (editor.offsetWidth / scale - measure.width) / 2
+            var _annX = (_tbLines2 === 1)
+                ? textboxUnscaledXAlignEditorText(editor, editorFontSize, scale)
                 : unscaledBoxX;
+            var _annW = (_tbLines2 === 1) ? measure.width : Math.max(measure.width, editor.offsetWidth / scale);
             var annotation = {
                 type: 'textbox',
-                x: _tbAnchorX,
+                x: _annX,
                 y: unscaledBoxY,
-                width: editor.offsetWidth / scale,
+                width: _annW,
                 height: Math.max(measure.height, editor.offsetHeight / scale, wrappedHeightUnscaled),
                 size: editorFontSize,
                 font: editorFontFamily,

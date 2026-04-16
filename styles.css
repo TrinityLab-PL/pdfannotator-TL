@@ -626,6 +626,8 @@ body {
     bottom: 0;
     height: 100%;
     margin: 0;
+    padding-inline: calc(10px + 0.15vw);
+    box-sizing: border-box;
 }
 
 .path-mod-pdfannotator #comment-wrapper button .icon {
@@ -642,7 +644,7 @@ body {
 
 .path-mod-pdfannotator #comment-wrapper h4,
 .path-mod-pdfannotator #comment-nav {
-    margin: 10px;
+    margin: 10px 0;
 }
 
 .path-mod-pdfannotator #comment-nav button {
@@ -2180,7 +2182,7 @@ body.tl-pdf-fullscreen .path-mod-pdfannotator .tl-save-textbox {
 .tl-comment-empty {
     color: #64748b;
     font-size: 13px;
-    padding: 6px 2px;
+    padding: 6px 0;
 }
 
 .tl-comment-composer {
@@ -2217,9 +2219,14 @@ body.tl-pdf-fullscreen .path-mod-pdfannotator .tl-save-textbox {
 }
 
 .tl-comment-visibility {
-    min-width: 130px;
-    height: 32px;
-    padding-left: 6px;
+    min-width: 0;
+    width: auto;
+    max-width: 100%;
+    min-height: 32px;
+    height: auto;
+    line-height: 1.25;
+    padding: 6px 22px 6px 6px;
+    box-sizing: border-box;
     border: 1px solid #cbd5e1;
     border-radius: 8px;
     background: #fff;
@@ -3151,21 +3158,39 @@ body.tl-pdf-fullscreen #pdftoolbar {
 
 .path-mod-pdfannotator .tl-composer-actions {
     display: flex;
-    align-items: center;
-    gap: 8px;
-    flex-wrap: wrap;
+    align-items: stretch;
+    justify-content: space-between;
+    gap: clamp(8px, 1vw, 16px);
+    width: 100%;
+    flex-wrap: nowrap;
+    min-width: 0;
+    box-sizing: border-box;
+    overflow-x: auto;
+    overflow-y: hidden;
+}
+
+.path-mod-pdfannotator .tl-composer-actions .tl-comment-visibility {
+    flex: 0 1 auto;
 }
 
 .path-mod-pdfannotator .tl-composer-btn {
-    height: 32px;
+    min-height: 32px;
+    height: auto;
     border: 1px solid #cbd5e1;
     background: #fff;
     color: #374151;
     border-radius: 6px;
-    padding: 0 12px;
+    padding: 6px 12px;
     font-size: 12px;
     font-weight: 400;
     cursor: pointer;
+    box-sizing: border-box;
+    line-height: 1.25;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    white-space: normal;
 }
 
 .path-mod-pdfannotator .tl-composer-btn:hover:not(:disabled) {
