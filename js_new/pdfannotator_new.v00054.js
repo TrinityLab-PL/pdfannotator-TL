@@ -5392,7 +5392,11 @@ function fitTextboxAroundContent(annotationData) {
         }
         var el = group.getAttr('commentBadgeEl');
         var has = !!group.getAttr('hasComments');
-        var selected = state.activeAnnotation && state.activeAnnotation.group === group;
+        var aid = String(group.getAttr('annotationId') || '');
+        var selected = state.activeAnnotation && (
+            state.activeAnnotation.group === group ||
+            String(state.activeAnnotation.annotationId || '') === aid
+        );
         if (!has) {
             if (el) {
                 el.style.display = 'none';
