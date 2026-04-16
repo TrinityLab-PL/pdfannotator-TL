@@ -2015,12 +2015,24 @@
         });
         pageState.annotationLayer.draw();
 
-        if (selectedId && pageState.annotationsById[selectedId]) {
-            var group = pageState.annotationsById[selectedId];
+        var restoredGroup = selectedId ? pageState.annotationsById[selectedId] : null;
+        if (selectedId && !restoredGroup) {
+            var sk;
+            for (sk in pageState.annotationsById) {
+                if (Object.prototype.hasOwnProperty.call(pageState.annotationsById, sk)) {
+                    if (annotationIdsMatch(sk, selectedId)) {
+                        restoredGroup = pageState.annotationsById[sk];
+                        break;
+                    }
+                }
+            }
+        }
+        if (selectedId && restoredGroup) {
+            var group = restoredGroup;
             state.activeAnnotation = {
                 pageNumber: pageNumber,
                 group: group,
-                annotationId: selectedId
+                annotationId: getStableAnnotationIdForGroup(group)
             };
             pageState.transformer.nodes([group]);
             pageState.transformer.visible(true);
@@ -5093,13 +5105,19 @@ function fitTextboxAroundContent(annotationData) {
         }
 
         pageState.annotationLayer.add(group);
-        pageState.annotationsById[String(stableAnnoKey != null ? stableAnnoKey : (annotation.uuid != null ? annotation.uuid : (annotation.id || '')))] = group;
+        var mapKeyGuess = String(stableAnnoKey != null ? stableAnnoKey : (annotation.uuid != null ? annotation.uuid : (annotation.id || '')));
+        pageState.annotationsById[mapKeyGuess] = group;
         var sidFinal = getStableAnnotationIdForGroup(group);
         if (sidFinal !== '') {
             var curAid = group.getAttr('annotationId');
             if (curAid == null || normalizeAnnotationIdCandidate(curAid) === '' || !annotationIdsMatch(curAid, sidFinal)) {
                 group.setAttr('annotationId', sidFinal);
             }
+            var canon = String(sidFinal);
+            if (mapKeyGuess !== canon && pageState.annotationsById[mapKeyGuess] === group) {
+                delete pageState.annotationsById[mapKeyGuess];
+            }
+            pageState.annotationsById[canon] = group;
         }
         ensureCommentBadgeForAnnotation(pageNumber, group);
         return group;
@@ -5309,6 +5327,10 @@ function fitTextboxAroundContent(annotationData) {
             });
         });
         syncOrphanCommentBadgesForSelection();
+        Object.keys(state.pages || {}).forEach(function (k2) {
+            var pnum = parseInt(k2, 10);
+            dedupeCommentBadgeElements(pnum);
+        });
     }
 
     function findAnnotationGroupById(idStr) {
@@ -5432,9 +5454,11 @@ function fitTextboxAroundContent(annotationData) {
         var candidates = [
             ad.uuid,
             ad.id,
+            ad.UUID,
             ad.annotationid,
             ad.annotationId,
-            ad.annotation_id
+            ad.annotation_id,
+            ad.AnnotationId
         ];
         var i;
         for (i = 0; i < candidates.length; i++) {
@@ -5454,9 +5478,7 @@ function fitTextboxAroundContent(annotationData) {
         var has = !!group.getAttr('hasComments');
         var aid = getStableAnnotationIdForGroup(group);
         if (el && aid) {
-            if (!el.getAttribute('data-tl-annotation-id')) {
-                el.setAttribute('data-tl-annotation-id', aid);
-            }
+            el.setAttribute('data-tl-annotation-id', aid);
         }
         var selected = state.activeAnnotation && (
             state.activeAnnotation.group === group ||
@@ -5477,6 +5499,30 @@ function fitTextboxAroundContent(annotationData) {
             el.style.display = '';
             updateCommentBadgePosition(group);
         }
+    }
+
+
+    function dedupeCommentBadgeElements(pageNumber) {
+        var pageEl = getPageElement(pageNumber);
+        if (!pageEl) {
+            return;
+        }
+        var keep = [];
+        var ps = state.pages[pageNumber];
+        if (ps && ps.annotationsById) {
+            Object.keys(ps.annotationsById).forEach(function (aidk) {
+                var g = ps.annotationsById[aidk];
+                var bel = g.getAttr('commentBadgeEl');
+                if (bel) {
+                    keep.push(bel);
+                }
+            });
+        }
+        pageEl.querySelectorAll('.tl-annotation-comment-badge').forEach(function (badge) {
+            if (keep.indexOf(badge) === -1 && badge.parentNode) {
+                badge.parentNode.removeChild(badge);
+            }
+        });
     }
 
     function syncOrphanCommentBadgesForSelection() {
