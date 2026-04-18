@@ -68,6 +68,7 @@
         renderedPages: {},
         pageRenderSignatures: {},
         renderSchedulePending: false,
+        pageRenderTasks: {},
         metrics: {
             sessionStartTs: Date.now(),
             renderStartTs: 0,
@@ -529,10 +530,54 @@
         state.savedPosition = null;
     }
 
-    function ajax(action, payload, method) {
+    var ajaxDedupeInflight = {};
+    var ajaxSlotActive = 0;
+    var ajaxSlotWaitQueue = [];
+    var AJAX_MAX_PARALLEL = 8;
+    var AJAX_TIMEOUT_MS = 90000;
+
+    function ajaxDedupeKey(action, payload) {
+        try {
+            return String(action) + '|' + JSON.stringify(payload || {});
+        } catch (e) {
+            return String(action) + '|';
+        }
+    }
+
+    function ajaxIsIdempotentRead(action) {
+        var idempotent = ['read', 'readbatch', 'readsingle', 'getInformation', 'getComments', 'getQuestions',
+            'getCommentsToPrint', 'searchComments', 'listRecycle'];
+        return idempotent.indexOf(action) !== -1;
+    }
+
+    function ajaxAcquireSlot() {
+        return new Promise(function (resolve) {
+            if (ajaxSlotActive < AJAX_MAX_PARALLEL) {
+                ajaxSlotActive += 1;
+                resolve();
+            } else {
+                ajaxSlotWaitQueue.push(function () {
+                    ajaxSlotActive += 1;
+                    resolve();
+                });
+            }
+        });
+    }
+
+    function ajaxReleaseSlot() {
+        ajaxSlotActive -= 1;
+        if (ajaxSlotActive < 0) {
+            ajaxSlotActive = 0;
+        }
+        var next = ajaxSlotWaitQueue.shift();
+        if (next) {
+            next();
+        }
+    }
+
+    function ajaxFetchOnce(action, payload, method) {
         var base = ((window.M && M.cfg && M.cfg.wwwroot) ? M.cfg.wwwroot : '') + '/mod/pdfannotator/action.php';
         state.ajaxNonce += 1;
-        // Critical anti-cache: unique URL per request protects against stale intermediary caches.
         var url = base + '?_ts=' + String(Date.now()) + '_' + String(state.ajaxNonce);
         var body = new URLSearchParams();
         var data = payload || {};
@@ -547,7 +592,17 @@
             body.append('sesskey', M.cfg.sesskey);
         }
 
-        return fetch(url, {
+        var controller = typeof AbortController !== 'undefined' ? new AbortController() : null;
+        var tid = null;
+        if (controller) {
+            tid = setTimeout(function () {
+                try {
+                    controller.abort();
+                } catch (e) {}
+            }, AJAX_TIMEOUT_MS);
+        }
+
+        var fetchOpts = {
             method: method || 'POST',
             credentials: 'same-origin',
             cache: 'no-store',
@@ -558,7 +613,12 @@
                 'Expires': '0'
             },
             body: body.toString()
-        }).then(function (response) {
+        };
+        if (controller) {
+            fetchOpts.signal = controller.signal;
+        }
+
+        return fetch(url, fetchOpts).then(function (response) {
             if (!response.ok) {
                 throw new Error('AJAX failed: ' + response.status);
             }
@@ -575,14 +635,12 @@
             try {
                 return JSON.parse(trimmed);
             } catch (err) {
-                // Some environments prepend warnings/notices before JSON.
                 var firstObj = trimmed.indexOf('{');
                 var lastObj = trimmed.lastIndexOf('}');
                 if (firstObj != -1 && lastObj > firstObj) {
                     try {
                         return JSON.parse(trimmed.slice(firstObj, lastObj + 1));
                     } catch (err2) {
-                        // fall through
                     }
                 }
                 var firstArr = trimmed.indexOf('[');
@@ -591,13 +649,67 @@
                     try {
                         return JSON.parse(trimmed.slice(firstArr, lastArr + 1));
                     } catch (err3) {
-                        // fall through
                     }
                 }
                 return { __parseError: true, __rawLen: trimmed.length, __rawHead: trimmed.slice(0, 200) };
             }
+        }).finally(function () {
+            if (tid) {
+                clearTimeout(tid);
+            }
         });
     }
+
+    function ajaxExecuteWithRetries(action, payload, method) {
+        function attempt(n) {
+            return ajaxFetchOnce(action, payload, method).catch(function (err) {
+                if (!ajaxIsIdempotentRead(action) || n >= 2) {
+                    throw err;
+                }
+                var msg = String(err && err.message ? err.message : err);
+                var retryable =
+                    msg.indexOf('Failed to fetch') !== -1 ||
+                    msg.indexOf('NetworkError') !== -1 ||
+                    msg.indexOf('AbortError') !== -1 ||
+                    msg.indexOf('aborted') !== -1 ||
+                    /AJAX failed: (408|429|502|503|504)/.test(msg);
+                if (!retryable) {
+                    throw err;
+                }
+                var delayMs = 350 * (n + 1);
+                return new Promise(function (resolve) {
+                    setTimeout(function () {
+                        resolve(attempt(n + 1));
+                    }, delayMs);
+                });
+            });
+        }
+        return attempt(0);
+    }
+
+    function ajax(action, payload, method) {
+        var dk = ajaxDedupeKey(action, payload || {});
+        if (ajaxIsIdempotentRead(action) && ajaxDedupeInflight[dk]) {
+            return ajaxDedupeInflight[dk];
+        }
+
+        var chain = ajaxAcquireSlot().then(function () {
+            return ajaxExecuteWithRetries(action, payload, method);
+        }).finally(function () {
+            ajaxReleaseSlot();
+        });
+
+        if (ajaxIsIdempotentRead(action)) {
+            ajaxDedupeInflight[dk] = chain;
+            return chain.finally(function () {
+                if (ajaxDedupeInflight[dk] === chain) {
+                    delete ajaxDedupeInflight[dk];
+                }
+            });
+        }
+        return chain;
+    }
+
 
     function moodlePdfStr(key, def) {
         try {
@@ -827,6 +939,7 @@
         state.renderingPages = {};
         state.renderedPages = {};
         state.pageRenderSignatures = {};
+        cancelAllPdfRenderTasks();
         state.renderSchedulePending = false;
         if (state.pendingUnifiedReflowTimer) {
             clearTimeout(state.pendingUnifiedReflowTimer);
@@ -1706,6 +1819,14 @@
             if (!pageState) {
                 return;
             }
+            var __rtKey = String(pageNo);
+            var __rt = state.pageRenderTasks && state.pageRenderTasks[__rtKey];
+            if (__rt && typeof __rt.cancel === 'function') {
+                try {
+                    __rt.cancel();
+                } catch (__e0) {}
+                delete state.pageRenderTasks[__rtKey];
+            }
             try {
                 if (pageState.stage && typeof pageState.stage.destroy === 'function') {
                     pageState.stage.destroy();
@@ -1879,6 +2000,7 @@
         syncZoomUiState();
 
         state.layoutRev = (state.layoutRev || 0) + 1;
+        cancelAllPdfRenderTasks();
 
         state.renderQueue = [];
         state.renderQueueMap = {};
@@ -2086,6 +2208,22 @@
         return request;
     }
 
+
+    function cancelAllPdfRenderTasks() {
+        try {
+            var m = state.pageRenderTasks || {};
+            Object.keys(m).forEach(function (pk) {
+                var t = m[pk];
+                if (t && typeof t.cancel === 'function') {
+                    try {
+                        t.cancel();
+                    } catch (e0) {}
+                }
+            });
+        } catch (e2) {}
+        state.pageRenderTasks = {};
+    }
+
     function renderPage(pageNumber) {
         var key = String(pageNumber);
         if (!state.pdf) {
@@ -2151,7 +2289,9 @@
                 return Promise.resolve();
             }
 
-            return page.render(renderContext).promise.then(function () {
+            var pdfRenderTask = page.render(renderContext);
+            state.pageRenderTasks[key] = pdfRenderTask;
+            return pdfRenderTask.promise.then(function () {
                 if ((state.layoutRev || 0) !== layoutCapture) {
                     return;
                 }
@@ -2177,6 +2317,10 @@
                 }
 
                 return loadAndRenderAnnotations(pageNumber, { forceNetwork: false, forceDraw: true });
+            }).finally(function () {
+                if (state.pageRenderTasks && state.pageRenderTasks[key] === pdfRenderTask) {
+                    delete state.pageRenderTasks[key];
+                }
             });
         });
     }

@@ -5611,7 +5611,7 @@ function startIndex(
                                         result = scaleUp(_svgPath, result);
                                         if (_pathBefore) {
                                             var _vp = _svgPath ? (_svgPath.getAttribute('data-pdf-annotate-viewport') ? JSON.parse(_svgPath.getAttribute('data-pdf-annotate-viewport')) : {}) : {};
-                                            fetch('http://localhost:7572/ingest/95e3202a-acc2-4a7c-ab43-d3db5f154f90',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'7d36cc'},body:JSON.stringify({sessionId:'7d36cc',location:'getAnnotationRect_path',message:'path bbox',hypothesisId:'H4',data:{beforeScale:_pathBefore,afterScale:{left:result.left,top:result.top,width:result.width,height:result.height},svgRect:_svgPath?_svgPath.getBoundingClientRect():null,viewport:_vp},timestamp:Date.now()})}).catch(function(){});
+                                            void 0;
                                         }
                                     }
                                     // FF scales nativly and uses always the 100%-Attributes, so the svg has to be scaled up to proof, if it is on the same position.
@@ -7292,7 +7292,7 @@ function startIndex(
                                             var _sr = svgEl ? svgEl.getBoundingClientRect() : {};
                                             var _em = 40;
                                             var _near = !!(rect.left < _em || rect.top < _em || (rect.left + rect.width) > ((_sr.width || 0) - _em) || (rect.top + rect.height) > ((_sr.height || 0) - _em));
-var _logD={sessionId:'7d36cc',location:'createEditOverlay',message:'drawing FF',hypothesisId:'H1H2H3',data:{baseLeft:baseLeft,baseTop:baseTop,styleLeft:styleLeft,styleTop:styleTop,usedRealRectForPosition:usedRealRectForPosition,realRect:{l:realRect.left,t:realRect.top,w:realRect.width,h:realRect.height},parentRect:{l:parentRect.left,t:parentRect.top,w:parentRect.width,h:parentRect.height},pageRect:{l:pageRect.left,t:pageRect.top},rect:{l:rect.left,t:rect.top,w:rect.width,h:rect.height},nearEdge:_near,overlayW:rect.width+paddingH*4,overlayH:rect.height+paddingV*4,svgRect:{l:_sr.left,t:_sr.top,w:_sr.width,h:_sr.height},viewport:(viewportData||{scale:currentScale}),pathTransform:(target.getAttribute('transform')||''),geomBaseLeft:(svgEl?_sr.left+rect.left:null),geomBaseTop:(svgEl?_sr.top+rect.top:null)},timestamp:Date.now()};console.log('[DEBUG drawing FF]',_logD);fetch('http://localhost:7572/ingest/95e3202a-acc2-4a7c-ab43-d3db5f154f90',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'7d36cc'},body:JSON.stringify(_logD)}).catch(function(){});
+var _logD={sessionId:'7d36cc',location:'createEditOverlay',message:'drawing FF',hypothesisId:'H1H2H3',data:{baseLeft:baseLeft,baseTop:baseTop,styleLeft:styleLeft,styleTop:styleTop,usedRealRectForPosition:usedRealRectForPosition,realRect:{l:realRect.left,t:realRect.top,w:realRect.width,h:realRect.height},parentRect:{l:parentRect.left,t:parentRect.top,w:parentRect.width,h:parentRect.height},pageRect:{l:pageRect.left,t:pageRect.top},rect:{l:rect.left,t:rect.top,w:rect.width,h:rect.height},nearEdge:_near,overlayW:rect.width+paddingH*4,overlayH:rect.height+paddingV*4,svgRect:{l:_sr.left,t:_sr.top,w:_sr.width,h:_sr.height},viewport:(viewportData||{scale:currentScale}),pathTransform:(target.getAttribute('transform')||''),geomBaseLeft:(svgEl?_sr.left+rect.left:null),geomBaseTop:(svgEl?_sr.top+rect.top:null)},timestamp:Date.now()};console.log('[DEBUG drawing FF]',_logD);void 0;
                                         }
                                         // #endregion
                                         overlay.style.zIndex = 22;
@@ -7323,7 +7323,7 @@ var _logD={sessionId:'7d36cc',location:'createEditOverlay',message:'drawing FF',
                                             requestAnimationFrame(function() {
                                                 var _or = overlay.getBoundingClientRect();
                                                 var _logD2={sessionId:'7d36cc',location:'createEditOverlay_post',message:'overlay actual rect',data:{overlayRect:{l:_or.left,t:_or.top,w:_or.width,h:_or.height},expectedBase:{l:baseLeft,t:baseTop}},timestamp:Date.now()};console.log('[DEBUG overlay actual]',_logD2);
-                                                fetch('http://localhost:7572/ingest/95e3202a-acc2-4a7c-ab43-d3db5f154f90',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'7d36cc'},body:JSON.stringify(_logD2)}).catch(function(){});
+                                                void 0;
                                             });
                                         }
                                         // #endregion
@@ -7591,7 +7591,7 @@ var _logD={sessionId:'7d36cc',location:'createEditOverlay',message:'drawing FF',
                                             var moveY = overlayStartViewportRect ? (_or.top - overlayStartViewportRect.top) : (overlayY - dragStartY);
                                             deltaX = (0, _utils.scaleDown)(svg, { x: moveX }).x;
                                             deltaY = (0, _utils.scaleDown)(svg, { y: moveY }).y;
-                                            (function(){ var _vp = svg.getAttribute('data-pdf-annotate-viewport'); var _scale = _vp ? JSON.parse(_vp).scale : null; fetch('http://localhost:7572/ingest/95e3202a-acc2-4a7c-ab43-d3db5f154f90',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'7d36cc'},body:JSON.stringify({sessionId:'7d36cc',location:'calcDelta_drawing',message:'drawing delta',hypothesisId:'H5',data:{overlayStartViewportRect:overlayStartViewportRect,overlayRect:{l:_or.left,t:_or.top,w:_or.width,h:_or.height},moveX:moveX,moveY:moveY,deltaX:deltaX,deltaY:deltaY,scale:_scale},timestamp:Date.now()})}).catch(function(){}); })();
+                                            (function(){ var _vp = svg.getAttribute('data-pdf-annotate-viewport'); var _scale = _vp ? JSON.parse(_vp).scale : null; void 0; })();
                                             console.log("calcDelta drawing VIEWPORT: moveX=" + moveX + " moveY=" + moveY + " => deltaX=" + deltaX + " deltaY=" + deltaY);
                                         } else {
                                             var moveX = overlayX - dragStartX;

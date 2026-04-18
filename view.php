@@ -85,20 +85,25 @@ $pdfannotator->mainfile = $file->get_filename();
 // Set course name for display.
 $PAGE->set_heading($course->fullname);
 
-// Trinity Lab: Default fullscreen body class
-if (isset($pdfannotator->defaultfullscreen) && $pdfannotator->defaultfullscreen) {
+// Overview / tab action (must be resolved before conditional assets / $OUTPUT->header()).
+$overviewpageactions = ['overview', 'overviewquestions', 'overviewanswers', 'overviewownposts', 'overviewreports'];
+$pdfannotatorpageaction = optional_param('action', 'view', PARAM_ALPHA);
+
+// Trinity Lab: Default fullscreen body class — only on PDF viewer tab (not overview/report/statistics shells).
+if ($pdfannotatorpageaction === 'view' && isset($pdfannotator->defaultfullscreen) && $pdfannotator->defaultfullscreen) {
     $PAGE->add_body_class('pdfannotator-default-fullscreen');
     $PAGE->add_body_class('tl-pdf-fullscreen');
     $PAGE->requires->css('/mod/pdfannotator/defaultfullscreen_hide.css?ver=1', true);
 }
-// Trinity Lab: Load enhanced fullscreen module
+
+// Trinity Lab: Load enhanced fullscreen module only on PDF viewer tab (not overview/report/statistics shells).
 // Hotfix: disable missing AMD module that can break page bootstrap.
-$PAGE->requires->js('/mod/pdfannotator/fullscreen_enhanced.js?ver=00056', false);
+if ($pdfannotatorpageaction === 'view') {
+    $PAGE->requires->js('/mod/pdfannotator/fullscreen_enhanced.js?ver=00056', false);
+}
 $PAGE->requires->css('/mod/pdfannotator/lib/shoelace/dist/themes/light.css');
 
 // Overview: body class for drawer inset CSS (must run before $OUTPUT->header()).
-$overviewpageactions = ['overview', 'overviewquestions', 'overviewanswers', 'overviewownposts', 'overviewreports'];
-$pdfannotatorpageaction = optional_param('action', 'view', PARAM_ALPHA);
 if (in_array($pdfannotatorpageaction, $overviewpageactions, true)) {
     $PAGE->add_body_class('pdfannotator-overview');
 }

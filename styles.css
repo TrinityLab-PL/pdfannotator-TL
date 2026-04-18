@@ -1026,7 +1026,7 @@ body {
 
 /* Boost drawers: more horizontal room in normal view only (not theatre / tl-pdf-fullscreen). */
 @media (min-width: 768px) {
-    body.path-mod-pdfannotator:not(.tl-pdf-fullscreen) #page.drawers div[role="main"] {
+    body.path-mod-pdfannotator:not(.tl-pdf-fullscreen):not(.pdfannotator-overview) #page.drawers div[role="main"] {
         padding-left: 0;
         padding-right: 0.8em;
     }
@@ -1192,10 +1192,18 @@ header, section, footer, aside, nav, main, article, figure {
     cursor: pointer;
 }
 
-/* For mobile phones: */  /* Only overview tables. Not table in reportform */
-.path-mod-pdfannotator .flexible .header,
-.path-mod-pdfannotator .flexible .cell {
-    width: 100%;
+/* For mobile phones: overview tables only (do not apply on desktop). */
+@media only screen and (max-width: 767px) {
+    .path-mod-pdfannotator #mod-pdfannotator-questions.flexible .header,
+    .path-mod-pdfannotator #mod-pdfannotator-questions.flexible .cell,
+    .path-mod-pdfannotator #mod-pdfannotator-answers.flexible .header,
+    .path-mod-pdfannotator #mod-pdfannotator-answers.flexible .cell,
+    .path-mod-pdfannotator #mod-pdfannotator-ownposts.flexible .header,
+    .path-mod-pdfannotator #mod-pdfannotator-ownposts.flexible .cell,
+    .path-mod-pdfannotator #mod-pdfannotator-reports.flexible .header,
+    .path-mod-pdfannotator #mod-pdfannotator-reports.flexible .cell {
+        width: 100%;
+    }
 }
 
 /* Dropdown button on hover & focus */
@@ -1653,11 +1661,15 @@ body.tl-pdf-fullscreen aside {
     display: none !important;
 }
 
-/* Ukryj wszystkie panele boczne silniej */
-body.tl-pdf-fullscreen .rightcolumn,
-body.tl-pdf-fullscreen #rightcolumn,
-body.tl-pdf-fullscreen [id*="questions"],
-body.tl-pdf-fullscreen [class*="questions"] {
+/* Ukryj #rightcolumn; selektory *questions* tylko w viewerze/komentarzach (nie #mod-pdfannotator-questions na Overview). */
+body.tl-pdf-fullscreen #rightcolumn {
+    display: none !important;
+    visibility: hidden !important;
+}
+body.tl-pdf-fullscreen #pdfannotator_index [id*="questions"],
+body.tl-pdf-fullscreen #pdfannotator_index [class*="questions"],
+body.tl-pdf-fullscreen #comment-wrapper [id*="questions"],
+body.tl-pdf-fullscreen #comment-wrapper [class*="questions"] {
     display: none !important;
     visibility: hidden !important;
 }

@@ -727,6 +727,7 @@ if ($action === 'subscribeQuestion') {
     $annotationid = required_param('annotationid', PARAM_INT);
     $departure = optional_param('fromoverview', 0, PARAM_INT);
     $itemsperpage = optional_param('itemsperpage', 5, PARAM_INT);
+    $itemsperpage = pdfannotator_normalize_itemsperpage($itemsperpage);
 
     $annotatorid = $DB->get_field('pdfannotator_annotations', 'pdfannotatorid', ['id' => $annotationid], $strictness = MUST_EXIST);
 
@@ -761,6 +762,7 @@ if ($action === 'unsubscribeQuestion') {
     $annotationid = required_param('annotationid', PARAM_INT);
     $departure = optional_param('fromoverview', 0, PARAM_INT);
     $itemsperpage = optional_param('itemsperpage', 5, PARAM_INT);
+    $itemsperpage = pdfannotator_normalize_itemsperpage($itemsperpage);
 
     $annotatorid = $DB->get_field('pdfannotator_annotations', 'pdfannotatorid', ['id' => $annotationid], $strictness = MUST_EXIST);
 

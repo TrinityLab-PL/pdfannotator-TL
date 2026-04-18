@@ -36,6 +36,21 @@ require_once($CFG->dirroot . '/repository/lib.php');
 require_once($CFG->dirroot . '/mod/pdfannotator/constants.php');
 
 /**
+ * Normalize overview table items-per-page from request (-1 all, 5, 10; anything else => 5).
+ *
+ * @param int $itemsperpage
+ * @return int
+ */
+function pdfannotator_normalize_itemsperpage($itemsperpage) {
+    $itemsperpage = (int) $itemsperpage;
+    $allowed = [-1, 5, 10];
+    if (in_array($itemsperpage, $allowed, true)) {
+        return $itemsperpage;
+    }
+    return 5;
+}
+
+/**
  * Display embedded pdfannotator file.
  * @param object $pdfannotator
  * @param object $cm
@@ -63,12 +78,13 @@ function pdfannotator_display_embed($pdfannotator, $cm, $course, $file, $page = 
     $strings = $stringman->load_component_strings('pdfannotator', 'en');
     // Method to use the language-strings in javascript.
     $PAGE->requires->strings_for_js(array_keys($strings), 'pdfannotator');
+    // Trinity Lab perf (P3): bundle-split/lazy-load deferred until profiling warrants it.
     // Load and execute the migrated javascript stack.
     $PAGE->requires->js('/mod/pdfannotator/lib/pdfjs/pdf.min.js?ver=00003', false);
     $PAGE->requires->js('/mod/pdfannotator/lib/konva/konva_loader.js?ver=00001', false);
     $PAGE->requires->js('/mod/pdfannotator/shared/textclipper.js', false);
     $PAGE->requires->js('/mod/pdfannotator/lib/lazy-brush/lazy-brush.umd.js?ver=00002', false);
-    $PAGE->requires->js('/mod/pdfannotator/js_new/pdfannotator_new.v00054.js?ver=00120', false);
+    $PAGE->requires->js('/mod/pdfannotator/js_new/pdfannotator_new.v00054.js?ver=00121', false);
     $PAGE->requires->js('/mod/pdfannotator/shared/locallib.js?ver=00008', false);
 
     // Pass parameters from PHP to JavaScript.
@@ -105,7 +121,6 @@ function pdfannotator_display_embed($pdfannotator, $cm, $course, $file, $page = 
     // The renderer renders the original index.php / takes the template and renders it.
     $myrenderer = $PAGE->get_renderer('mod_pdfannotator');
     echo $myrenderer->render_index(new index($pdfannotator, $capabilities, $file));
-    $PAGE->requires->js_init_call('checkOnlyOneCheckbox', null, true);
     $PAGE->requires->js_init_call('checkOnlyOneCheckbox', null, true);
 
     pdfannotator_print_intro($pdfannotator, $cm, $course);
