@@ -90,6 +90,349 @@
             strictEnsurePageReady: true
         }
     };
+    // #region agent log
+    function __dbg574c2cLog(hypothesisId, message, data, location, runId) {
+        try {
+            var payload = {
+                sessionId: '574c2c',
+                runId: String(runId || (state.__dbg574c2cRunId || 'pre-fix')),
+                hypothesisId: String(hypothesisId || 'H-UNK'),
+                location: String(location || ''),
+                message: String(message || ''),
+                data: data || {},
+                timestamp: Date.now()
+            };
+            // #region agent log
+            if (window && window.console && window.console.log) {
+                window.console.log('[DBG574c2c] ' + JSON.stringify(payload));
+            }
+            // #endregion
+            fetch('http://127.0.0.1:9877/ingest/b88a72fb-d8c0-4fe6-ad91-8038cd930dc9', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-Debug-Session-Id': '574c2c'
+                },
+                body: JSON.stringify(payload)
+            }).catch(function () {});
+            fetch('/mod/pdfannotator/bug8_fullscreen_log.php', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(payload)
+            }).catch(function () {});
+        } catch (err) {}
+    }
+
+    function __dbg574c2cSnapshot(label, runId) {
+        var v = document.getElementById('viewer');
+        var root = document.getElementById('pdfannotator_index');
+        var pages = v ? v.querySelectorAll('.page[data-page-number]') : [];
+        var arr = Array.prototype.slice.call(pages || []);
+        function pick(i) {
+            if (i < 0 || i >= arr.length) return null;
+            var page = arr[i];
+            if (!page) return null;
+            var c = page.querySelector('canvas.tl-pdf-canvas');
+            var s = window.getComputedStyle(page);
+            return {
+                pageNumber: page.getAttribute('data-page-number') || null,
+                offsetTop: page.offsetTop,
+                offsetHeight: page.offsetHeight,
+                canvasOffsetTop: c ? c.offsetTop : null,
+                canvasOffsetHeight: c ? c.offsetHeight : null,
+                marginTop: s.marginTop,
+                marginBottom: s.marginBottom,
+                paddingTop: s.paddingTop,
+                paddingBottom: s.paddingBottom
+            };
+        }
+        return {
+            label: label,
+            t: Date.now(),
+            runId: String(runId || (state.__dbg574c2cRunId || 'pre-fix')),
+            mode: isTheaterModeActive() ? 'theatre' : 'normal',
+            classes: {
+                bodyFullscreen: !!document.body.classList.contains('tl-pdf-fullscreen'),
+                layoutV4: !!(root && root.classList.contains('tl-layout-v4')),
+                zoom200: !!(root && root.classList.contains('zoom-200')),
+                theatreState: root ? root.getAttribute('data-tl-theatre') : null,
+                commentsState: root ? root.getAttribute('data-comments-state') : null
+            },
+            viewer: v ? {
+                scrollTop: v.scrollTop,
+                scrollHeight: v.scrollHeight,
+                clientHeight: v.clientHeight,
+                offsetWidth: v.offsetWidth,
+                clientWidth: v.clientWidth
+            } : null,
+            pageCount: arr.length,
+            pages: {
+                p1: pick(0),
+                p20: pick(19),
+                p50: pick(49),
+                pLast: pick(arr.length - 1)
+            }
+        };
+    }
+
+    function __dbg574c2cPush(message, data, runId, hypothesisId) {
+        if (!state.__dbg574c2cRunId) {
+            state.__dbg574c2cRunId = String(runId || ('run_' + Date.now()));
+        }
+        // #region agent log
+        __dbg574c2cLog(hypothesisId || 'H-UNK', message, data, 'pdfannotator_new.v00054.js', state.__dbg574c2cRunId);
+        // #endregion
+    }
+    function __dbg574c2cDelta(a, b) {
+        if (!a || !b || !a.viewer || !b.viewer) return { missing: true };
+        var out = {
+            dScrollTop: b.viewer.scrollTop - a.viewer.scrollTop,
+            dScrollHeight: b.viewer.scrollHeight - a.viewer.scrollHeight,
+            dClientHeight: b.viewer.clientHeight - a.viewer.clientHeight,
+            pages: {}
+        };
+        ['p1', 'p20', 'p50', 'pLast'].forEach(function (key) {
+            if (a.pages && b.pages && a.pages[key] && b.pages[key]) {
+                out.pages[key] = {
+                    dOffsetTop: b.pages[key].offsetTop - a.pages[key].offsetTop,
+                    dOffsetHeight: b.pages[key].offsetHeight - a.pages[key].offsetHeight,
+                    dCanvasOffsetTop: b.pages[key].canvasOffsetTop - a.pages[key].canvasOffsetTop,
+                    dCanvasOffsetHeight: b.pages[key].canvasOffsetHeight - a.pages[key].canvasOffsetHeight
+                };
+            }
+        });
+        return out;
+    }
+    // #region agent log
+    function __tlTheatreDebug574c2cParseScrollTop() {
+        if (state && Number.isFinite(state.__dbg574c2cScrollTop)) {
+            return Math.max(0, Number(state.__dbg574c2cScrollTop));
+        }
+
+        var search = window.location.search || '';
+        var match = /dbg574c2c-scroll=(\d+(?:\.\d+)?)/.exec(search);
+        var parsed = 0;
+        if (match && match[1]) {
+            var value = Number(match[1]);
+            if (Number.isFinite(value) && value >= 0) {
+                parsed = value;
+            }
+        }
+
+        state.__dbg574c2cScrollTop = parsed;
+        return parsed;
+    }
+
+    function __tlTheatreDebug574c2cApplyScrollHint(label, runId) {
+        var viewer = document.getElementById('viewer');
+        var scrollTop = __tlTheatreDebug574c2cParseScrollTop();
+
+        if (!viewer || !Number.isFinite(scrollTop) || scrollTop <= 0) {
+            return;
+        }
+
+        var maxScroll = Math.max(0, viewer.scrollHeight - viewer.clientHeight);
+        var target = Math.max(0, Math.min(maxScroll, Math.round(scrollTop)));
+
+        viewer.scrollTop = target;
+        __dbg574c2cPush("dbg:scroll:force", {
+            label: label || 'set',
+            requested: scrollTop,
+            target: target,
+            maxScroll: maxScroll,
+            scrollHeight: viewer.scrollHeight,
+            clientHeight: viewer.clientHeight
+        }, runId, 'H1,H2,H4');
+    }
+
+    function __tlTheatreDebug574c2cSetScale(zoom, runId) {
+        var z = Number(zoom);
+        if (!Number.isFinite(z)) {
+            return;
+        }
+        state.zoomUser = z;
+        var scaleSelect = document.querySelector('select.scale');
+        if (scaleSelect) {
+            scaleSelect.value = String(z);
+        }
+        __dbg574c2cPush('dbg:scale:set', {
+            zoom: z,
+            from: document.getElementById('viewer') ? document.getElementById('viewer').scrollTop : null
+        }, runId, 'H1,H3,H5');
+        triggerUnifiedReflow({ delayMs: 90, gentle: isTheaterModeActive(), ignoreTheatreBusy: true });
+    }
+
+    function __tlTheatreDebug574c2cRunCycles(count, runId) {
+        var total = Number.isFinite(Number(count)) ? Number(count) : 3;
+        if (total < 1) {
+            total = 3;
+        }
+        total = Math.floor(total);
+        var rid = String(runId || ('run_' + Date.now()));
+        state.__dbg574c2cRunId = rid;
+        __tlTheatreDebug574c2cApplyScrollHint('runCycles:start', rid);
+        __dbg574c2cPush('dbg:runCycles:start', {
+            total: total
+        }, rid, 'H1,H3,H5');
+
+        var step = 1;
+        function cycleStep() {
+            if (step > total) {
+                __dbg574c2cPush('dbg:runCycles:complete', {
+                    total: total
+                }, rid, 'H1,H3,H5');
+                return;
+            }
+
+            if (isTheaterModeActive()) {
+                __dbg574c2cPush('dbg:runCycles:normalize', {
+                    step: step
+                }, rid, 'H1,H3,H5');
+                __tlTheatreDebug574c2cApplyScrollHint('cycle-' + step + '-normalize', rid);
+                toggleTheaterMode();
+                setTimeout(cycleStep, 850);
+                return;
+            }
+
+            __dbg574c2cPush('dbg:runCycles:before-enter', {
+                step: step
+            }, rid, 'H1,H3,H5');
+            __tlTheatreDebug574c2cApplyScrollHint('cycle-' + step + '-before', rid);
+            __dbg574c2cPush('dbg:runCycles:before', __dbg574c2cSnapshot('cycle-' + step + '-before', rid), rid, 'H1,H3,H5');
+            toggleTheaterMode();
+            setTimeout(function () {
+                __tlTheatreDebug574c2cApplyScrollHint('cycle-' + step + '-entered', rid);
+                __dbg574c2cPush('dbg:runCycles:entered', {
+                    step: step
+                }, rid, 'H1,H3,H5');
+                __dbg574c2cPush('dbg:runCycles:after-enter', __dbg574c2cSnapshot('cycle-' + step + '-entered', rid), rid, 'H1,H3,H5');
+                toggleTheaterMode();
+                setTimeout(function () {
+                    __dbg574c2cPush('dbg:runCycles:after-leave', {
+                        step: step
+                    }, rid, 'H1,H3,H5');
+                    __tlTheatreDebug574c2cApplyScrollHint('cycle-' + step + '-after', rid);
+                    __dbg574c2cPush('dbg:runCycles:after', __dbg574c2cSnapshot('cycle-' + step + '-after', rid), rid, 'H1,H3,H5');
+                    step += 1;
+                    cycleStep();
+                }, 850);
+            }, 850);
+        }
+
+        cycleStep();
+    }
+
+    function __tlTheatreDebug574c2cRunGapMatrix() {
+        var combos = [
+            { zoom: 1, commentsOpen: true, label: '100-open' },
+            { zoom: 1, commentsOpen: false, label: '100-closed' },
+            { zoom: 1.5, commentsOpen: true, label: '150-open' },
+            { zoom: 1.5, commentsOpen: false, label: '150-closed' },
+            { zoom: 2, commentsOpen: true, label: '200-open' },
+            { zoom: 2, commentsOpen: false, label: '200-closed' }
+        ];
+        var rid = String('run_' + Date.now());
+        var index = 0;
+        state.__dbg574c2cRunId = rid;
+        __dbg574c2cPush('dbg:gapMatrix:start', {
+            total: combos.length
+        }, rid, 'H1,H2,H3,H5');
+
+        function runCombo() {
+            if (index >= combos.length) {
+                __dbg574c2cPush('dbg:gapMatrix:complete', {
+                    total: combos.length
+                }, rid, 'H1,H2,H3,H5');
+                return;
+            }
+
+            var combo = combos[index];
+            if (isTheaterModeActive()) {
+                __dbg574c2cPush('dbg:gapMatrix:normalize', {
+                    index: index,
+                    label: combo.label
+                }, rid, 'H1,H2,H3,H5');
+                toggleTheaterMode();
+                setTimeout(runCombo, 700);
+                return;
+            }
+
+            __dbg574c2cPush('dbg:gapMatrix:configure', {
+                index: index,
+                label: combo.label,
+                zoom: combo.zoom,
+                commentsOpen: combo.commentsOpen
+            }, rid, 'H1,H2,H3,H5');
+            __tlTheatreDebug574c2cSetScale(combo.zoom, rid);
+            setCommentsOpen(combo.commentsOpen);
+            triggerUnifiedReflow({
+                delayMs: 120,
+                gentle: true,
+                ignoreTheatreBusy: true
+            });
+            __dbg574c2cPush('dbg:gapMatrix:before', __dbg574c2cSnapshot('gapMatrix-' + combo.label + '-before', rid), rid, 'H1,H2,H3,H5');
+            toggleTheaterMode();
+            setTimeout(function () {
+                __dbg574c2cPush('dbg:gapMatrix:entered', __dbg574c2cSnapshot('gapMatrix-' + combo.label + '-entered', rid), rid, 'H1,H2,H3,H5');
+                toggleTheaterMode();
+                setTimeout(function () {
+                    __dbg574c2cPush('dbg:gapMatrix:after', __dbg574c2cSnapshot('gapMatrix-' + combo.label + '-after', rid), rid, 'H1,H2,H3,H5');
+                    index += 1;
+                    setTimeout(runCombo, 700);
+                }, 900);
+            }, 900);
+        }
+
+        runCombo();
+    }
+
+    window.__tlTheatreDebug574c2c = window.__tlTheatreDebug574c2c || {};
+    window.__tlTheatreDebug574c2c.runCycles = function (count) {
+        __tlTheatreDebug574c2cRunCycles(count, undefined);
+    };
+    window.__tlTheatreDebug574c2c.runGapMatrix = function () {
+        __tlTheatreDebug574c2cRunGapMatrix();
+    };
+    window.__tlTheatreDebug574c2c.resetRunId = function () {
+        state.__dbg574c2cRunId = 'run_' + Date.now();
+        return state.__dbg574c2cRunId;
+    };
+
+    console.log('[DBG574C2C] helper loaded', window.location.search || '');
+    window.setTimeout(function () {
+        try {
+            var search = window.location.search || '';
+            var hash = window.location.hash || '';
+            var shouldRun = (search.indexOf('dbg574c2c') !== -1) || (hash.indexOf('dbg574c2c') !== -1);
+            if (!shouldRun) {
+                return;
+            }
+            var cycles = 3;
+            var match = /dbg574c2c-cycles=(\d+)/.exec(search);
+            if (match && match[1]) {
+                var parsed = parseInt(match[1], 10);
+                if (isFinite(parsed) && parsed > 0) {
+                    cycles = parsed;
+                }
+            }
+            if (search.indexOf('dbg574c2c-mode=gap') !== -1) {
+                __tlTheatreDebug574c2cRunGapMatrix();
+                return;
+            }
+            if (search.indexOf('dbg574c2c-mode=all') !== -1 || search.indexOf('dbg574c2c-gap=1') !== -1) {
+                __tlTheatreDebug574c2cRunCycles(cycles);
+                window.setTimeout(function () {
+                    __tlTheatreDebug574c2cRunGapMatrix();
+                }, 10500);
+                return;
+            }
+            __tlTheatreDebug574c2cRunCycles(cycles);
+        } catch (err) {}
+    }, 1400);
+    // #endregion
+    // #endregion
     var cursorCache = {};
     var CURSOR_SIZE = 24;
 
@@ -460,18 +803,9 @@
             return null;
         }
         var canvas = pageEl.querySelector('canvas.tl-pdf-canvas');
-        var pageTop = pageEl.offsetTop;
-        var canvasTop = canvas ? canvas.offsetTop : 0;
-        var contentTop = pageTop + canvasTop;
+        var contentTop = pageEl.offsetTop + (canvas ? canvas.offsetTop : 0);
         var contentHeight = canvas && canvas.offsetHeight ? Math.max(1, canvas.offsetHeight) : Math.max(1, pageEl.offsetHeight || 1);
-        return {
-            contentTop: contentTop,
-            contentHeight: contentHeight,
-            pageTop: pageTop,
-            canvasTop: canvasTop,
-            pageHeight: pageEl.offsetHeight || null,
-            canvasHeight: canvas ? (canvas.offsetHeight || null) : null
-        };
+        return { contentTop: contentTop, contentHeight: contentHeight };
     }
 
     function buildSavedPosition(pageNo, scrollTop) {
@@ -485,22 +819,30 @@
         var metrics = getPageContentScrollMetrics(anchorPage);
         var actualPageOffsetTop = null;
         var actualPageOffsetHeight = null;
-        var actualPageTop = null;
-        var actualCanvasTop = null;
-        var actualPageHeight = null;
-        var actualCanvasHeight = null;
         if (metrics) {
             actualPageOffsetTop = metrics.contentTop;
             actualPageOffsetHeight = metrics.contentHeight;
-            actualPageTop = Number.isFinite(metrics.pageTop) ? metrics.pageTop : null;
-            actualCanvasTop = Number.isFinite(metrics.canvasTop) ? metrics.canvasTop : null;
-            actualPageHeight = Number.isFinite(metrics.pageHeight) ? metrics.pageHeight : null;
-            actualCanvasHeight = Number.isFinite(metrics.canvasHeight) ? metrics.canvasHeight : null;
             ratio = clampNumber((top - actualPageOffsetTop) / actualPageOffsetHeight, 0, 1);
         }
         var maxScroll = viewer ? Math.max(0, viewer.scrollHeight - viewer.clientHeight) : 0;
         var scrollFraction = maxScroll > 0 ? clampNumber(top / maxScroll, 0, 1) : 0;
         var signature = viewer ? computePageRenderSignature() : null;
+        // #region agent log
+        __dbg574c2cPush('dbg:buildSavedPosition', {
+            pageNo: pageNo,
+            top: top,
+            anchorPage: anchorPage,
+            ratio: ratio,
+            scrollFraction: scrollFraction,
+            pageCount: state.pdf && state.pdf.numPages ? state.pdf.numPages : null,
+            viewerScrollHeight: viewer ? viewer.scrollHeight : null,
+            viewerClientHeight: viewer ? viewer.clientHeight : null,
+            maxScroll: maxScroll,
+            signature: signature,
+            actualPageOffsetTop: actualPageOffsetTop,
+            actualPageOffsetHeight: actualPageOffsetHeight
+        }, state.__dbg574c2cRunId, 'H2,H4');
+        // #endregion
         return {
             page: anchorPage,
             ratio: ratio,
@@ -510,10 +852,6 @@
             signature: signature,
             pageOffsetTop: actualPageOffsetTop,
             pageOffsetHeight: actualPageOffsetHeight,
-            pageTop: actualPageTop,
-            canvasTop: actualCanvasTop,
-            pageHeight: actualPageHeight,
-            canvasHeight: actualCanvasHeight,
             maxScroll: maxScroll
         };
     }
@@ -536,11 +874,15 @@
         if (!pending) {
             return;
         }
+        // #region agent log
+        __dbg574c2cPush('dbg:applyScrollFromRestorePending', {
+            commit: commit,
+            pending: pending,
+            restorePage: normalizePendingTargetPage(pending),
+            mode: isTheaterModeActive() ? 'theatre' : 'normal'
+        }, state.__dbg574c2cRunId, 'H2,H4');
+        // #endregion
         var viewer = viewerEl();
-        if (!viewer) {
-            return;
-        }
-        var restoreCurrentPage = computeAnchorPageFromScroll(viewer, viewer.scrollTop);
         if (!viewer) {
             return;
         }
@@ -566,42 +908,32 @@
         var metrics = getPageContentScrollMetrics(pageNum);
         var currentSignature = computePageRenderSignature();
         var useRatio = ratio !== null;
-        var pendingTop = Number.isFinite(pending.pageOffsetTop) ? pending.pageOffsetTop : null;
         var pendingHeight = Number.isFinite(pending.pageOffsetHeight) ? pending.pageOffsetHeight : null;
-        var pendingPageTop = Number.isFinite(pending.pageTop) ? pending.pageTop : null;
-        var pendingCanvasTop = Number.isFinite(pending.canvasTop) ? pending.canvasTop : null;
-        var pendingPageHeight = Number.isFinite(pending.pageHeight) ? pending.pageHeight : null;
-        var pendingCanvasHeight = Number.isFinite(pending.canvasHeight) ? pending.canvasHeight : null;
-        var currentTop = metrics && Number.isFinite(metrics.contentTop) ? metrics.contentTop : null;
         var currentHeight = metrics && Number.isFinite(metrics.contentHeight) ? metrics.contentHeight : null;
-        var currentPageTop = metrics && Number.isFinite(metrics.pageTop) ? metrics.pageTop : null;
-        var currentCanvasTop = metrics && Number.isFinite(metrics.canvasTop) ? metrics.canvasTop : null;
-        var currentPageHeight = metrics && Number.isFinite(metrics.pageHeight) ? metrics.pageHeight : null;
-        var currentCanvasHeight = metrics && Number.isFinite(metrics.canvasHeight) ? metrics.canvasHeight : null;
 
         if (useRatio && pending.captureSignature && currentSignature !== pending.captureSignature) {
             useRatio = false;
         }
-        var pageHeightDeltaRatio = null;
+
         if (useRatio) {
-            if (!Number.isFinite(currentHeight)) {
+            if (pendingHeight == null || currentHeight == null) {
                 useRatio = false;
-            } else if (pendingHeight == null) {
-                // page height snapshot not yet available; still trust ratio when current metrics are present
-                useRatio = true;
             } else {
-                pageHeightDeltaRatio = Math.abs(currentHeight - pendingHeight) / Math.max(1, pendingHeight);
+                var heightDelta = Math.abs(currentHeight - pendingHeight) / pendingHeight;
+                if (heightDelta > 0.05) {
+                    useRatio = false;
+                }
             }
         }
 
         var targetTop;
         if (metrics && useRatio && ratio !== null) {
             targetTop = metrics.contentTop + ratio * metrics.contentHeight;
-        } else if (Number.isFinite(pending.scrollTop)) {
-            targetTop = pending.scrollTop;
         } else if (Number.isFinite(pending.scrollFraction)) {
             var maxScrollFr = Math.max(0, viewer.scrollHeight - viewer.clientHeight);
             targetTop = clampNumber(pending.scrollFraction, 0, 1) * maxScrollFr;
+        } else if (Number.isFinite(pending.scrollTop)) {
+            targetTop = pending.scrollTop;
         } else if (metrics) {
             targetTop = metrics.contentTop;
         } else {
@@ -610,15 +942,15 @@
         var maxScroll = Math.max(0, viewer.scrollHeight - viewer.clientHeight);
         var appliedTop = Math.max(0, Math.min(maxScroll, Math.round(targetTop)));
         viewer.scrollTop = appliedTop;
-        requestAnimationFrame(function () {
-            requestAnimationFrame(function () {
-                var viewerAfter = viewerEl();
-                if (!viewerAfter) {
-                    return;
-                }
-                var settleMetrics = getPageContentScrollMetrics(pageNum);
-            });
-        });
+        // #region agent log
+        __dbg574c2cPush('dbg:applyScrollFromRestorePending:applied', {
+            mode: isTheaterModeActive() ? 'theatre' : 'normal',
+            pending: pending,
+            targetTop: targetTop,
+            appliedTop: appliedTop,
+            maxScroll: maxScroll
+        }, state.__dbg574c2cRunId, 'H2,H4');
+        // #endregion
         if (commit) {
             state.restorePositionPending = null;
             state.savedPosition = null;
@@ -630,6 +962,14 @@
         if (!pending) {
             return;
         }
+        // #region agent log
+        __dbg574c2cPush('dbg:applyPendingSavedPosition:start', {
+            renderedPageNo: renderedPageNo,
+            restoreBatchCaptured: restoreBatchCaptured,
+            pending: pending,
+            restoreBatchId: state.restoreBatchId
+        }, state.__dbg574c2cRunId, 'H4');
+        // #endregion
         if (normalizePendingTargetPage(pending) !== Number(renderedPageNo)) {
             return;
         }
@@ -656,18 +996,37 @@
     function restoreScrollAfterTheatreLayoutIfPossible() {
         var pending = state.restorePositionPending;
         if (!pending || !Number.isFinite(pending.scrollFraction)) {
+            // #region agent log
+            __dbg574c2cPush('dbg:restoreScrollAfterTheatreLayoutIfPossible:skip', {
+                reason: !pending ? 'noPending' : 'fractionNaN',
+                pending: pending
+            }, state.__dbg574c2cRunId, 'H1,H2');
+            // #endregion
             return;
         }
         var viewer = viewerEl();
         if (!viewer) {
+            // #region agent log
+            __dbg574c2cPush('dbg:restoreScrollAfterTheatreLayoutIfPossible:skip', { reason: 'noViewer' }, state.__dbg574c2cRunId, 'H1,H2');
+            // #endregion
             return;
         }
         var maxScroll = Math.max(0, viewer.scrollHeight - viewer.clientHeight);
         if (maxScroll <= 0) {
+            // #region agent log
+            __dbg574c2cPush('dbg:restoreScrollAfterTheatreLayoutIfPossible:skip', { reason: 'maxScroll', maxScroll: maxScroll }, state.__dbg574c2cRunId, 'H1,H2');
+            // #endregion
             return;
         }
         var appliedTop = Math.round(clampNumber(pending.scrollFraction, 0, 1) * maxScroll);
         viewer.scrollTop = appliedTop;
+        // #region agent log
+        __dbg574c2cPush('dbg:restoreScrollAfterTheatreLayoutIfPossible', {
+            appliedTop: appliedTop,
+            maxScroll: maxScroll,
+            pending: pending
+        }, state.__dbg574c2cRunId, 'H1,H2');
+        // #endregion
     }
 
     function isTheatreLayoutTransitionBusy() {
@@ -1261,8 +1620,6 @@
             if (dt > 0 && dt < 140 && delta > Math.max(180, viewer.clientHeight * 0.6)) {
                 state.fastScrollUntilTs = now + 700;
             }
-            if (state.__dbg574c2cRunId && dt > 0 && dt < 1500 && delta > 60 && (state.restorePositionPending || isTheatreLayoutTransitionBusy())) {
-            }
             state.lastScrollTop = topNow;
             state.lastScrollTs = now;
 
@@ -1396,14 +1753,7 @@
                     ratio: state.savedPosition.ratio,
                     scrollTop: state.savedPosition.scrollTop,
                     scrollFraction: state.savedPosition.scrollFraction,
-                    scale: state.savedPosition.scale,
-                    captureSignature: state.savedPosition.signature,
-                    pageOffsetTop: state.savedPosition.pageOffsetTop,
-                    pageOffsetHeight: state.savedPosition.pageOffsetHeight,
-                    pageTop: state.savedPosition.pageTop,
-                    canvasTop: state.savedPosition.canvasTop,
-                    pageHeight: state.savedPosition.pageHeight,
-                    canvasHeight: state.savedPosition.canvasHeight
+                    scale: state.savedPosition.scale
                 };
                 state.initialPage = state.savedPosition.page;
             }
@@ -1417,6 +1767,14 @@
     }
 
     function softReflowPdfLayoutAfterTheaterToggle(options) {
+        // #region agent log
+        __dbg574c2cPush('dbg:softReflow:start', {
+            options: options || {},
+            restorePendingBefore: state.restorePositionPending,
+            restoreBatchId: state.restoreBatchId,
+            mode: isTheaterModeActive() ? 'theatre' : 'normal'
+        }, state.__dbg574c2cRunId, 'H1,H3,H4,H5');
+        // #endregion
         if (!state.pdf) {
             syncZoomUiState();
             return;
@@ -1438,10 +1796,16 @@
             var viewer = viewerEl();
             updateEffectiveScale();
             syncZoomUiState();
-            var savedSource = opts.preToggleSaved || null;
-            var saved = savedSource || (viewer ? buildSavedPosition(getCurrentPage(true), viewer.scrollTop) : null);
-            var savedFromPreToggle = !!savedSource;
+            var saved = viewer ? buildSavedPosition(getCurrentPage(true), viewer.scrollTop) : null;
             var sigAfterFirst = computePageRenderSignature();
+            // #region agent log
+            __dbg574c2cPush('dbg:softReflow:capture', {
+                saved: saved,
+                signature: sigAfterFirst,
+                viewerScrollTop: viewer ? viewer.scrollTop : null,
+                restoreBatchId: state.restoreBatchId
+            }, state.__dbg574c2cRunId, 'H2');
+            // #endregion
             if (saved) {
                 state.restoreBatchId = (state.restoreBatchId || 0) + 1;
                 state.restorePositionPending = {
@@ -1451,13 +1815,9 @@
                     scrollFraction: saved.scrollFraction,
                     scale: state.scale,
                     batchId: state.restoreBatchId,
-                    captureSignature: savedFromPreToggle ? null : saved.signature,
+                    captureSignature: saved.signature,
                     pageOffsetTop: saved.pageOffsetTop,
-                    pageOffsetHeight: saved.pageOffsetHeight,
-                    pageTop: saved.pageTop,
-                    canvasTop: saved.canvasTop,
-                    pageHeight: saved.pageHeight,
-                    canvasHeight: saved.canvasHeight
+                    pageOffsetHeight: saved.pageOffsetHeight
                 };
                 state.initialPage = saved.page;
                 state.savedPosition = {
@@ -1466,13 +1826,9 @@
                     scrollTop: saved.scrollTop,
                     scrollFraction: saved.scrollFraction,
                     scale: state.scale,
-                    captureSignature: savedFromPreToggle ? null : saved.signature,
+                    captureSignature: saved.signature,
                     pageOffsetTop: saved.pageOffsetTop,
-                    pageOffsetHeight: saved.pageOffsetHeight,
-                    pageTop: saved.pageTop,
-                    canvasTop: saved.canvasTop,
-                    pageHeight: saved.pageHeight,
-                    canvasHeight: saved.canvasHeight
+                    pageOffsetHeight: saved.pageOffsetHeight
                 };
             }
             function finishTheatreSoftReflow() {
@@ -1520,8 +1876,15 @@
     }
 
     function toggleTheaterMode() {
-        var viewerBeforeToggle = viewerEl();
-        var preToggleSaved = viewerBeforeToggle ? buildSavedPosition(getCurrentPage(true), viewerBeforeToggle.scrollTop) : null;
+        // #region agent log
+        state.__dbg574c2cRunId = state.__dbg574c2cRunId || ('run_' + Date.now());
+        __dbg574c2cPush('dbg:toggle:entry', {
+            enabledBefore: theaterState.enabled,
+            docAttr: (document.documentElement ? document.documentElement.getAttribute('data-tl-theatre') : null),
+            mode: isTheaterModeActive() ? 'theatre' : 'normal'
+        }, state.__dbg574c2cRunId, 'H1,H3,H5');
+        __dbg574c2cPush('dbg:before', __dbg574c2cSnapshot('toggle-before', state.__dbg574c2cRunId), state.__dbg574c2cRunId, 'H1,H3,H5');
+        // #endregion
         var selectors = [
             '#page-header',
             '#page-footer',
@@ -1548,7 +1911,7 @@
             var btnOn = document.querySelector('[data-proxy-action="fullscreen"]');
             if (btnOn) { btnOn.innerHTML = '<svg viewBox="0 0 2300 2300" width="28" height="28" fill="none" xmlns="http://www.w3.org/2000/svg"><path stroke="rgb(59,62,62)" stroke-width="200" stroke-linecap="round" stroke-linejoin="round" d="M 825,826 L 825,126 M 125,826 L 825,826 M 825,1474 L 825,2174 M 125,1474 L 825,1474 M 1476,826 L 1476,126 M 2176,826 L 1476,826 M 1476,1474 L 1476,2174 M 2176,1474 L 1476,1474"/></svg>'; }
             purgeStaleHtmlAnnotationLayersForVisiblePages();
-            softReflowPdfLayoutAfterTheaterToggle({ delayMs: 60, gentle: false, preToggleSaved: preToggleSaved });
+            softReflowPdfLayoutAfterTheaterToggle({ delayMs: 60, gentle: false });
             syncLayoutDocumentState();
             return;
         }
@@ -1561,9 +1924,13 @@
         var btnOff = document.querySelector('[data-proxy-action="fullscreen"]');
         if (btnOff) { btnOff.innerHTML = '<svg viewBox="0 0 2300 2300" width="28" height="28" fill="none" xmlns="http://www.w3.org/2000/svg"><path stroke="rgb(59,62,62)" stroke-width="200" stroke-linecap="round" stroke-linejoin="round" d="M 125,126 L 125,826 M 825,126 L 125,126 M 125,2174 L 125,1474 M 825,2174 L 125,2174 M 2176,126 L 2176,826 M 1476,126 L 2176,126 M 2176,2174 L 2176,1474 M 1476,2174 L 2176,2174"/></svg>'; }
         purgeStaleHtmlAnnotationLayersForVisiblePages();
-        softReflowPdfLayoutAfterTheaterToggle({ delayMs: 72, gentle: true, preToggleSaved: preToggleSaved });
+        softReflowPdfLayoutAfterTheaterToggle({ delayMs: 72, gentle: true });
         requestAnimationFrame(function () {
             requestAnimationFrame(function () {
+                // #region agent log
+                __dbg574c2cPush('dbg:after-leave', __dbg574c2cSnapshot('toggle-after-leave', state.__dbg574c2cRunId), state.__dbg574c2cRunId, 'H1,H3,H5');
+                __dbg574c2cPush('dbg:toggle:complete', { enabledAfter: theaterState.enabled }, state.__dbg574c2cRunId, 'H1,H3,H5');
+                // #endregion
                 syncLayoutDocumentState();
             });
         });
@@ -2247,14 +2614,7 @@
                 ratio: Number.isFinite(state.savedPosition.ratio) ? state.savedPosition.ratio : null,
                 scrollTop: Number.isFinite(state.savedPosition.scrollTop) ? state.savedPosition.scrollTop : 0,
                 scrollFraction: Number.isFinite(state.savedPosition.scrollFraction) ? state.savedPosition.scrollFraction : null,
-                scale: Number.isFinite(state.savedPosition.scale) ? state.savedPosition.scale : state.scale,
-                captureSignature: state.savedPosition.captureSignature || null,
-                pageOffsetTop: Number.isFinite(state.savedPosition.pageOffsetTop) ? state.savedPosition.pageOffsetTop : null,
-                pageOffsetHeight: Number.isFinite(state.savedPosition.pageOffsetHeight) ? state.savedPosition.pageOffsetHeight : null,
-                pageTop: Number.isFinite(state.savedPosition.pageTop) ? state.savedPosition.pageTop : null,
-                canvasTop: Number.isFinite(state.savedPosition.canvasTop) ? state.savedPosition.canvasTop : null,
-                pageHeight: Number.isFinite(state.savedPosition.pageHeight) ? state.savedPosition.pageHeight : null,
-                canvasHeight: Number.isFinite(state.savedPosition.canvasHeight) ? state.savedPosition.canvasHeight : null
+                scale: Number.isFinite(state.savedPosition.scale) ? state.savedPosition.scale : state.scale
             };
         }
         if (viewer) {
@@ -2288,14 +2648,7 @@
                 ratio: Number.isFinite(state.savedPosition.ratio) ? state.savedPosition.ratio : null,
                 scrollTop: Number.isFinite(state.savedPosition.scrollTop) ? state.savedPosition.scrollTop : 0,
                 scrollFraction: Number.isFinite(state.savedPosition.scrollFraction) ? state.savedPosition.scrollFraction : null,
-                scale: Number.isFinite(state.savedPosition.scale) ? state.savedPosition.scale : state.scale,
-                captureSignature: state.savedPosition.captureSignature || null,
-                pageOffsetTop: Number.isFinite(state.savedPosition.pageOffsetTop) ? state.savedPosition.pageOffsetTop : null,
-                pageOffsetHeight: Number.isFinite(state.savedPosition.pageOffsetHeight) ? state.savedPosition.pageOffsetHeight : null,
-                pageTop: Number.isFinite(state.savedPosition.pageTop) ? state.savedPosition.pageTop : null,
-                canvasTop: Number.isFinite(state.savedPosition.canvasTop) ? state.savedPosition.canvasTop : null,
-                pageHeight: Number.isFinite(state.savedPosition.pageHeight) ? state.savedPosition.pageHeight : null,
-                canvasHeight: Number.isFinite(state.savedPosition.canvasHeight) ? state.savedPosition.canvasHeight : null
+                scale: Number.isFinite(state.savedPosition.scale) ? state.savedPosition.scale : state.scale
             };
         }
         if (viewer) {
@@ -6302,15 +6655,7 @@ function fitTextboxAroundContent(annotationData) {
                 page: state.initialPage,
                 ratio: 0,
                 scrollTop: 0,
-                scrollFraction: 0,
-                scale: state.scale,
-                captureSignature: null,
-                pageOffsetTop: null,
-                pageOffsetHeight: null,
-                pageTop: null,
-                canvasTop: null,
-                pageHeight: null,
-                canvasHeight: null
+                scale: state.scale
             };
         } else {
             try {
@@ -6324,14 +6669,7 @@ function fitTextboxAroundContent(annotationData) {
                     ratio: Number.isFinite(stored.ratio) ? clampNumber(stored.ratio, 0, 1) : null,
                     scrollTop: Number.isFinite(stored.scrollTop) ? stored.scrollTop : 0,
                     scrollFraction: Number.isFinite(stored.scrollFraction) ? clampNumber(stored.scrollFraction, 0, 1) : null,
-                    scale: state.scale,
-                    captureSignature: typeof stored.captureSignature === 'string' ? stored.captureSignature : null,
-                    pageOffsetTop: Number.isFinite(stored.pageOffsetTop) ? stored.pageOffsetTop : null,
-                    pageOffsetHeight: Number.isFinite(stored.pageOffsetHeight) ? stored.pageOffsetHeight : null,
-                    pageTop: Number.isFinite(stored.pageTop) ? stored.pageTop : null,
-                    canvasTop: Number.isFinite(stored.canvasTop) ? stored.canvasTop : null,
-                    pageHeight: Number.isFinite(stored.pageHeight) ? stored.pageHeight : null,
-                    canvasHeight: Number.isFinite(stored.canvasHeight) ? stored.canvasHeight : null
+                    scale: state.scale
                 };
             } else {
                 state.initialPage = 1;
@@ -6343,14 +6681,7 @@ function fitTextboxAroundContent(annotationData) {
             ratio: state.savedPosition.ratio,
             scrollTop: state.savedPosition.scrollTop,
             scrollFraction: Number.isFinite(state.savedPosition.scrollFraction) ? state.savedPosition.scrollFraction : null,
-            scale: state.savedPosition.scale,
-            captureSignature: state.savedPosition.captureSignature || null,
-            pageOffsetTop: Number.isFinite(state.savedPosition.pageOffsetTop) ? state.savedPosition.pageOffsetTop : null,
-            pageOffsetHeight: Number.isFinite(state.savedPosition.pageOffsetHeight) ? state.savedPosition.pageOffsetHeight : null,
-            pageTop: Number.isFinite(state.savedPosition.pageTop) ? state.savedPosition.pageTop : null,
-            canvasTop: Number.isFinite(state.savedPosition.canvasTop) ? state.savedPosition.canvasTop : null,
-            pageHeight: Number.isFinite(state.savedPosition.pageHeight) ? state.savedPosition.pageHeight : null,
-            canvasHeight: Number.isFinite(state.savedPosition.canvasHeight) ? state.savedPosition.canvasHeight : null
+            scale: state.savedPosition.scale
         } : null;
         state.annoid = annoid;
         state.commid = commid;
